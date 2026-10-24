@@ -1,12 +1,12 @@
 # Status
 
-_Last updated: 2026-10-24, end of Phase 2 (PR open, awaiting review)._
+_Last updated: 2026-10-24, Phase 2 merged (PR #2) and live at https://skypassalert.com._
 
 ## Done
 ### Phase 1: Foundation (merged)
 Public repo, CI, the Pages deploy at https://skypassalert.com (HTTPS enforced, www → apex), docs skeleton.
 
-### Phase 2: Engine core + redesign + device strategy (this PR)
+### Phase 2: Engine core + redesign + device strategy (merged 2026-10-24)
 - **Engine** (`src/engine`, framework-free, 97.8% line coverage, CI-enforced ≥ 90%):
   - Time scales with IERS ΔUT1.
   - TEME → ECEF → geodetic → az/el.
@@ -50,10 +50,19 @@ Public repo, CI, the Pages deploy at https://skypassalert.com (HTTPS enforced, w
 | Who | Task |
 |---|---|
 | **Ishaan** | **Tonight (Sat 2026-10-24), Fremont:** step outside at **7:32 PM**, face where the sun went down, look one fist to the left. Tiangong climbs almost straight overhead (80°) and fades out high in the east-northeast at 7:36:56. Note what you see in `FIELD_LOG.md`. |
-| Ishaan | Review the Phase 2 PR. Suggested reading order is in the PR's "Read this first". Run `npm run lab:seasons` (write your prediction first). |
-| Ishaan | Device check after merge (GitHub Pages has no PR previews; or use `npm run dev -- --host` on home Wi-Fi): iPhone Safari, an Android phone, and inside WeChat (send the link to yourself). Note anything that looks off. |
+| Ishaan | Read through the merged PR's "Read this first" list. Run `npm run lab:seasons` (write your prediction first). |
+| Ishaan | Device check on the live site: iPhone Safari, an Android phone, and inside WeChat (send https://skypassalert.com to yourself). Note anything that looks off. |
 | Parent | (From Phase 1, if not done) Porkbun email forwarding for `hello@skypassalert.com`. |
 | Ishaan (optional) | If you add a `main` ruleset requiring PRs, add **GitHub Actions** to its bypass list, or the Data workflow's commits will be rejected. |
+
+## Verified after merge (2026-10-24)
+- CI green on PR #2: lint/test/build/budget, Skyfield accuracy job (first GitHub run), Lighthouse.
+- Deploy succeeded. https://skypassalert.com serves the live preview: tonight's answer is Tiangong at 7:32 PM, with no console errors.
+- The Data workflow, run once by hand:
+  - Elements were unchanged since this morning's fetch, so no commit.
+  - EOP refreshed and committed by the bot.
+  - The bot-triggered redeploy succeeded.
+- The whole pipeline works end to end. Scheduled runs take over from here.
 
 ## Housekeeping done this phase
 - Closed Dependabot's TypeScript 7 PR. Dependabot now ignores TypeScript majors until typescript-eslint supports TS 7 (D-006 / dependabot.yml).
