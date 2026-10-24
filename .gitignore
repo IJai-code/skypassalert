@@ -8,3 +8,5 @@ coverage/
 .env.*
 *.log
 .vite/
+.venv/
+*.bsp

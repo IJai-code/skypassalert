@@ -16,7 +16,10 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     coverage: {
       provider: 'v8',
-      include: ['src/**/*.{ts,tsx}'],
+      include: ['src/engine/**/*.ts'],
+      exclude: ['src/engine/**/*.test.ts', 'src/engine/__fixtures__/**'],
+      // The engine is the part that must be right; CI fails below these.
+      thresholds: { lines: 90, functions: 90, statements: 90, branches: 80 },
     },
   },
 })

@@ -1,0 +1,5 @@
+# Reference implementation for the accuracy harness (CI only). Pinned.
+skyfield==1.55
+sgp4==2.25
+jplephem==2.24
+numpy==2.0.2
