@@ -8,3 +8,6 @@ coverage/
 .env.*
 *.log
 .vite/
+.venv/
+*.bsp
+validation/finals2000A.all

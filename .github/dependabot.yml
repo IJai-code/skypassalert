@@ -10,6 +10,11 @@ updates:
       runtime:
         dependency-type: production
     open-pull-requests-limit: 5
+    ignore:
+      # TypeScript 7 (the native compiler) needs typescript-eslint support first.
+      # Revisit when typescript-eslint declares TS 7 compatibility.
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
   - package-ecosystem: github-actions
     directory: /
     schedule:

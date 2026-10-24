@@ -29,6 +29,11 @@ export default tseslint.config(
     },
   },
   {
+    // In tests, `!` after a lookup is an assertion the test itself checks.
+    files: ['**/*.test.{ts,tsx}'],
+    rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
+  },
+  {
     files: ['scripts/**/*.{js,mjs}', '*.config.{js,ts}'],
     languageOptions: { globals: globals.node },
   },

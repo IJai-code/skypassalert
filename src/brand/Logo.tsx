@@ -5,6 +5,7 @@ import { useId } from 'react'
 
 type LogoProps = {
   size?: number
+  /** Accessible name; pass "" when the logo sits inside an already-labelled link. */
   title?: string
 }
 
@@ -15,7 +16,12 @@ export function Logo({ size = 48, title = 'SkyPassAlert logo' }: LogoProps) {
   const clip = `${id}-clip`
 
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" role="img" aria-label={title}>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      {...(title ? { role: 'img', 'aria-label': title } : { 'aria-hidden': true })}
+    >
       <defs>
         <radialGradient id={glow} cx="0.5" cy="0.5" r="0.5">
           <stop offset="0" stopColor="#FFE3A3" />

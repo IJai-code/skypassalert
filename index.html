@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>SkyPassAlert · Look up tonight</title>
+    <title>SkyPassAlert · When to see the space station tonight</title>
     <meta
       name="description"
-      content="Free, plain-language times for when the International Space Station and China's Tiangong station fly over you: when to step outside, where to look, how bright. Coming soon."
+      content="When the International Space Station and China's Tiangong station fly over you tonight, in plain words: what time to step outside, which way to face, how high and how bright. Free, no app, no account."
     />
     <link rel="canonical" href="https://skypassalert.com/" />
-    <meta name="theme-color" content="#0B1026" />
+    <meta name="theme-color" content="#080c1a" />
     <meta name="color-scheme" content="dark" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -19,18 +19,221 @@
     <meta property="og:title" content="SkyPassAlert · Look up tonight" />
     <meta
       property="og:description"
-      content="When to see the space stations from where you stand, in plain words. Free, open source, no ads. Coming soon."
+      content="When to see the space stations from where you stand, in plain words. Free, open source, no ads."
     />
     <meta property="og:url" content="https://skypassalert.com/" />
     <meta name="twitter:card" content="summary" />
+
+    <!--
+      Browser support gate (docs/DESIGN.md#device-support). Runs before anything
+      else and uses only ES3-era syntax so even very old browsers can execute it.
+      Lookbehind regexes arrived in Safari 16.4, our iOS floor; structuredClone and
+      Array.prototype.at mark ~2022 engines; module workers run the engine.
+    -->
+    <script>
+      ;(function () {
+        var ok = false
+        try {
+          ok =
+            typeof Worker === 'function' &&
+            typeof structuredClone === 'function' &&
+            typeof [].at === 'function' &&
+            new RegExp('(?<=a)b').test('ab') &&
+            new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles' }).resolvedOptions()
+              .timeZone === 'America/Los_Angeles'
+        } catch (e) {
+          ok = false
+        }
+        if (!ok) document.documentElement.className += ' legacy'
+      })()
+    </script>
+    <style>
+      /* Inline so the fallback looks right with zero JavaScript and no CSS bundle. */
+      #fallback {
+        display: none;
+      }
+      .legacy #root {
+        display: none;
+      }
+      .legacy #fallback {
+        display: block;
+      }
+      #fallback {
+        background: #080c1a;
+        color: #eceff7;
+        min-height: 100vh;
+        margin: 0;
+        font-family:
+          -apple-system, system-ui, 'Segoe UI', Roboto, Arial, 'PingFang SC', 'Microsoft YaHei',
+          sans-serif;
+        font-size: 17px;
+        line-height: 1.5;
+      }
+      #fallback .wrap {
+        max-width: 34em;
+        margin: 0 auto;
+        padding: 24px 20px 48px;
+      }
+      #fallback h1 {
+        font-size: 30px;
+        line-height: 1.15;
+        margin: 28px 0 8px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      #fallback p {
+        margin: 0 0 12px;
+        color: #a9b2cc;
+      }
+      #fallback .lead {
+        font-size: 19px;
+        color: #eceff7;
+      }
+      #fallback .row {
+        overflow: hidden;
+        margin: 24px 0;
+        padding: 20px 0;
+        border-top: 1px solid #263052;
+        border-bottom: 1px solid #263052;
+      }
+      #fallback .row img {
+        display: block;
+        width: 148px;
+        height: 148px;
+        margin: 0 0 16px;
+        border-radius: 4px;
+      }
+      #fallback .url {
+        font-size: 22px;
+        font-weight: 600;
+        color: #eceff7;
+      }
+      #fallback ul {
+        padding: 0;
+        margin: 0 0 20px;
+        list-style: none;
+      }
+      #fallback li {
+        padding: 10px 0;
+        border-bottom: 1px solid #1b2340;
+        color: #a9b2cc;
+      }
+      #fallback li strong {
+        color: #eceff7;
+        font-weight: 600;
+      }
+      #fallback .ex {
+        color: #737c99;
+        font-size: 14px;
+        margin-top: 4px;
+      }
+      #fallback .ex b {
+        color: #ffc65c;
+        font-weight: 600;
+      }
+      #fallback .brand {
+        color: #eceff7;
+        font-weight: 600;
+        font-size: 15px;
+      }
+      #fallback .brand svg {
+        display: inline-block;
+        vertical-align: middle;
+        margin-right: 8px;
+      }
+      #fallback .small {
+        font-size: 14px;
+        color: #737c99;
+      }
+      #fallback a {
+        color: #eceff7;
+      }
+    </style>
+    <noscript
+      ><style>
+        #fallback {
+          display: block;
+        }
+        #root {
+          display: none;
+        }
+      </style></noscript
+    >
   </head>
-  <body>
+  <body style="margin: 0">
     <div id="root"></div>
-    <noscript>
-      <p style="padding: 1rem; color: #e8ecf8; background: #0b1026">
-        SkyPassAlert: look up tonight. Coming soon. This page needs JavaScript.
-      </p>
-    </noscript>
+
+    <!-- Shown to browsers that can't run the sky calculator (and with JavaScript off). -->
+    <div id="fallback">
+      <div class="wrap">
+        <div class="brand">
+          <svg width="24" height="24" viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="32" cy="32" r="30" fill="#0B1026" stroke="#2A3566" stroke-width="2" />
+            <path
+              d="M10 46 A22 28 0 0 1 54 46"
+              fill="none"
+              stroke="#9AA4C2"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-dasharray="1 5"
+            />
+            <line x1="4" y1="46" x2="60" y2="46" stroke="#E8ECF8" stroke-width="2.5" />
+            <circle cx="43" cy="21.8" r="4.5" fill="#FFC65C" />
+          </svg>
+          SkyPassAlert
+        </div>
+
+        <h1>This page needs a newer phone or browser.</h1>
+        <p class="lead">
+          It works out exactly when the space stations fly over you, and that math needs a browser
+          from the last few years.
+        </p>
+
+        <div class="row">
+          <img src="/qr.svg" alt="QR code for skypassalert.com" />
+          <p>
+            Open it on almost any phone from 2017 on: an
+            <strong style="color: #eceff7">iPhone 8 or newer</strong> with a recent update, or an
+            <strong style="color: #eceff7">Android phone with Chrome</strong>. Scan the code with
+            that phone’s camera, or type
+          </p>
+          <p class="url">skypassalert.com</p>
+        </div>
+
+        <p style="color: #eceff7">What you’ll get there:</p>
+        <ul>
+          <li>
+            <strong>The exact time</strong> the International Space Station or China’s Tiangong
+            station flies over where you are tonight.
+          </li>
+          <li>
+            <strong>Where to look</strong> in plain words: which way to face, how high, how bright,
+            how long.
+          </li>
+          <li>
+            <strong>Free.</strong> No app to install, no account, no ads, nothing about you
+            collected.
+          </li>
+        </ul>
+        <p class="ex">
+          Example of an answer (not a real prediction): <b>Tonight 7:32 PM.</b> Face where the sun
+          went down, a little to the left. It climbs almost straight overhead. Very bright, about 4
+          minutes.
+        </p>
+
+        <p lang="zh-Hans" data-translation-status="needs-native-review" style="margin-top: 28px">
+          这个页面需要较新的手机或浏览器。请用 2017 年以后的 iPhone（已更新系统）或装有 Chrome
+          的安卓手机打开
+          skypassalert.com，查看今晚国际空间站和中国空间站（天宫）飞过你头顶的准确时间和方向。
+        </p>
+
+        <p class="small" style="margin-top: 28px">
+          Using WeChat or another app? Tap ··· and choose “Open in Browser”. Questions:
+          <a href="mailto:hello@skypassalert.com">hello@skypassalert.com</a>
+        </p>
+      </div>
+    </div>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

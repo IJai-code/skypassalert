@@ -68,3 +68,50 @@ Each entry records the options considered, the choice made, and the tradeoffs. N
   - axe checks what actually renders (stronger than a static lint), but only for the states the tests render.
   - jsdom can't compute color contrast, so contrast is covered by Lighthouse.
   - Revisit when jsx-a11y supports ESLint 10.
+
+## D-009 Engine covers the Moon and planets, not just stations (2026-10-24)
+- **Context:** `lab:seasons` shows the ISS alone gives a worthwhile evening pass on ~30% of evenings in Fremont, both stations together ~68%. Many nights, stations alone mean "nothing tonight".
+- **Choice:** add the Moon (Schlyter) and five naked-eye planets (JPL approximate elements + IAU 1976 precession + Meeus magnitudes) to the engine now. The UI shows them as "Also in tonight's sky".
+- **Tradeoffs:** about 3 KB gzipped in the worker. Arcminute accuracy (validated) instead of arcsecond, which is irrelevant for naked-eye use.
+
+## D-010 Minimal data pipeline moved from Phase 5 to Phase 2 (2026-10-24)
+- **Why:** the redesigned page should show real predictions, not fixtures, and the fetch archive should start accumulating as early as possible.
+- **What:**
+  - `.github/workflows/data.yml` fetches `GROUP=stations&FORMAT=JSON` every 6 h (one request) and EOP daily.
+  - It stops on any non-200 response and opens an issue, commits only on change, and archives every fetch.
+- **Detail:** pushes made with `GITHUB_TOKEN` don't trigger other workflows, so the job starts the deploy with `gh workflow run deploy.yml` (workflow_dispatch is the documented exception).
+- **Still Phase 5:** place pages, OG images, feeds, the `visual`/`last-30-days` groups.
+
+## D-011 No camera AR as the core; a "Sky Pointer" later (2026-10-24)
+See `docs/DESIGN.md#7-camera--ar-decision`. In short: eyes see these stations better than a phone camera at night, bright screens ruin dark adaptation, web compass headings carry tens of degrees of error, in-app browsers block cameras, and native apps already do AR. Phase 2 ships a "look now" state in words and fists with a live map dot; Phase 6 adds motion-guided pointing with an optional camera backdrop.
+
+## D-012 Device tiers and an ES3-safe support check (2026-10-24)
+- Support floor = Vite's `baseline-widely-available` (Safari 16.4, Chrome 111, Firefox 114).
+- An inline, ES3-syntax feature check in `index.html` (Worker, `structuredClone`, `Array.prototype.at`, lookbehind regex, `Intl` time zones) adds `class="legacy"`, which reveals a static, styled page with a QR code and plain instructions.
+- In-app browsers are detected by user agent **only** to show exact "open in browser" steps, never to block.
+
+## D-013 Design direction: a departure board for the sky (2026-10-24)
+- **Options:** a planetarium-style dark UI; a card dashboard (what orbitalradar does); a Flighty-like information board.
+- **Choice:** information board. One big time, states that change as the pass approaches, aligned columns, hairlines instead of cards, amber reserved for the station.
+- **Sky map convention:** north up, east right (map style). Non-astronomers read maps; star charts (east left) assume you're lying on your back.
+- Full rules and the list of banned patterns: `docs/DESIGN.md`.
+
+## D-014 Magnitudes exclude extinction and are calibrated to Heavens-Above (2026-10-24)
+- Standard magnitudes are fitted to 15 published Fremont passes (ISS −1.5, Tiangong +0.4; residuals in `docs/learn/06-brightness.md`).
+- Like other predictors, we leave out atmospheric extinction so numbers compare; the brightness *words* account for low passes.
+
+## D-015 The accuracy reference gets the same Earth-orientation data as the engine (2026-10-24)
+- Skyfield's bundled UT1 prediction was 0.136 s off current IERS data for Oct 2026, which made our satellite positions look ~60 m off.
+- The generator now builds Skyfield's timescale (and polar motion) from the same CelesTrak/IERS EOP file. The remaining difference (≤ 15 m) is our documented polar-motion neglect.
+
+## D-016 "Tonight" means the evening; ranking weights (2026-10-24)
+- **Periods:** evening = 12:00–22:00 local, late night = 22:00–04:00, before dawn = 04:00–12:00. Only evening and late-night passes can be "tonight".
+- **Score** = 0.45·height + 0.35·brightness + 0.2·duration. A threshold of 0.25 separates "worth going out" from "listed for completeness".
+- **Bedtime filter** default: 9:30 PM, applied to the pass's end.
+- Weights are judgment calls, to be revisited with soft-launch feedback.
+
+## D-017 satellite.js's WebAssembly runtime is aliased out (2026-10-24)
+satellite.js 7 re-exports an optional wasm bulk propagator that loads a pthreads worker. Vite can't nest that worker inside ours, and we don't need it. `vite.config.ts` aliases `#wasm-single-thread` / `#wasm-multi-thread` to a stub that throws. The worker chunk is 17.7 KB gzipped.
+
+## D-018 Labs run TypeScript directly with Node (2026-10-24)
+Node 22.18+ strips TypeScript types natively. Labs (`scripts/labs/*.ts`) import the real engine with no build step or extra dependency. The engine's JSON import uses `with { type: 'json' }` so it loads in both Vite and Node.

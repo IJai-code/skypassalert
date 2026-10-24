@@ -6,7 +6,7 @@ Purpose: know what already exists so our public claims stay true. Rules:
 - No disparagement. Describe competitors factually or not at all.
 - "To verify" means not yet confirmed first-hand, so it can't be used in public copy.
 
-Last reviewed: **2026-10-24** (desk research; first-hand device checks pending).
+Last reviewed: **2026-10-24** (desk research plus first-hand use of orbitalradar, Heavens-Above and See A Satellite Tonight on a 375 px viewport).
 
 | Product | Type | What it offers (as checked) | Status | Source |
 |---|---|---|---|---|
@@ -21,6 +21,23 @@ Last reviewed: **2026-10-24** (desk research; first-hand device checks pending).
 | Stellarium Web | Web planetarium | Includes satellites. Pass-prediction UX: to verify. | To verify | https://stellarium-web.org/ |
 | Others (GoSatWatch, Look4Sat, SkySafari, Star Walk, uphere.space, tracksat.space, …) | Mixed | Listed for completeness. | To verify | https://en.wikipedia.org/wiki/List_of_satellite_pass_predictors |
 
+## First-hand observations (2026-10-24, 375 px viewport)
+These shaped `docs/DESIGN.md`. They describe what we saw on that date, not permanent facts about these products.
+- **orbitalradar.com/iss-visible-tonight/seattle:**
+  - First screen blank until scripts loaded.
+  - Then a breadcrumb, a gradient "Support us" button, emoji icons and a grid of stat cards.
+  - Headline "YES — VISIBLE TONIGHT ✅" for a next pass at 5:17 AM.
+  - Countdown and sky conditions are useful ideas.
+- **Heavens-Above** (Fremont, ISS and CSS pass summaries):
+  - Accurate. Our engine matches its times to the second (`src/engine/passes/heavens-above.test.ts`).
+  - Its table is wider than a phone screen. Directions are abbreviations, heights are degrees.
+- **See A Satellite Tonight:** asks for a location (or an address for Street View) before showing anything. The Street View idea for "where to look" is clever, but needs a third-party service.
+- **Real data, Fremont, week of 2026-10-24:** every visible ISS pass was before dawn, while Tiangong passed almost every evening (e.g. 7:32 PM tonight, 80° high, magnitude −2.2 per Heavens-Above). Over 8 weeks our `lab:seasons` estimates good evening passes on ~30% of evenings for the ISS alone, ~38% for Tiangong, ~68% for either.
+
+## Design references (not competitors)
+- **Flighty** (2023 Apple Design Award, Interaction): airport-signage information design, context-aware states, countdowns. https://www.apple.com.cn/newsroom/2023/06/apple-announces-winners-of-the-2023-apple-design-awards/
+- **Sky Guide** (2014 Apple Design Award): red night mode. https://www.geekwire.com/2014/app-week-sky-guide-home-planetarium-iphone-ipad/
+
 ## What overlaps (so we don't claim it as unique)
 - Chinese-language UI (Heavens-Above).
 - Tiangong predictions (Heavens-Above, orbitalradar, AstroViewer, Space Station Passes).
@@ -33,7 +50,8 @@ These are claims about *our* product, true once shipped:
 2. **Bilingual EN/zh-Hans place pages and share cards** designed for WeChat, where the image is the share unit.
 3. **Family mode:** a bedtime filter and kid-friendly wording.
 4. **Calendar subscription feeds with no account or email.**
-5. **Open source with a published, CI-generated accuracy report** and field-observation data.
+5. **Open source with a published, CI-generated accuracy report** (`docs/accuracy/phase2.md`) and, from Phase 8, field-observation data.
+7. **Evening-first framing with both stations, plus the Moon and planets** so there is usually something to see. (Others list Tiangong too; the framing is ours.)
 6. **No ads, no accounts, no cookies, no third-party trackers.**
 
 ## To verify before Phase 3 public copy

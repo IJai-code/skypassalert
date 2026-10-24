@@ -1,46 +1,65 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { App } from './App.tsx'
+import { forecast } from './engine/predict.ts'
+import type { ForecastRequest } from './engine/index.ts'
+import stations from './engine/__fixtures__/stations-2026-10-24.json'
 
-describe('Coming soon page', () => {
-  it('leads with the tagline', () => {
-    render(<App />)
-    expect(screen.getByRole('heading', { level: 1, name: 'Look up tonight.' })).toBeInTheDocument()
-  })
+// The worker can't run in jsdom: compute on the main thread instead.
+vi.mock('./lib/predict.ts', () => ({
+  requestForecast: (req: ForecastRequest) => Promise.resolve(forecast(req)),
+}))
 
-  it('labels the sample prediction as an example', () => {
-    render(<App />)
-    expect(screen.getByRole('heading', { name: /example only/i })).toBeInTheDocument()
-  })
-
-  it('gives the logo an accessible name', () => {
-    render(<App />)
-    expect(screen.getByRole('img', { name: 'SkyPassAlert logo' })).toBeInTheDocument()
-  })
-
-  it('links to the contact address and the source code', () => {
-    render(<App />)
-    expect(screen.getByRole('link', { name: 'hello@skypassalert.com' })).toHaveAttribute(
-      'href',
-      'mailto:hello@skypassalert.com',
-    )
-    expect(screen.getByRole('link', { name: /source code/i })).toHaveAttribute(
-      'href',
-      'https://github.com/IJai-code/skypassalert',
-    )
-  })
-
-  it('marks the Chinese section with its language and review status', () => {
-    const { container } = render(<App />)
-    const zh = container.querySelector('[lang="zh-Hans"]')
-    expect(zh).not.toBeNull()
-    expect(zh).toHaveAttribute('data-translation-status', 'needs-native-review')
-  })
+beforeEach(() => {
+  // Saturday 2026-10-24, 1:00 PM in Fremont.
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-24T20:00:00Z'))
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({ source: 'test', fetchedAt: '2026-10-24T08:52:00Z', objects: stations }),
+        ),
+      ),
+    ),
+  )
+})
+afterEach(() => {
+  vi.useRealTimers()
+  vi.unstubAllGlobals()
 })
 
-describe('Accessibility', () => {
+describe('home screen', () => {
+  it('leads with tonight’s best pass: time, object and a plain-language path', async () => {
+    render(<App />)
+    const answer = await screen.findByRole('region', { name: /tonight in fremont/i })
+    expect(within(answer).getByText('7:32')).toBeInTheDocument()
+    expect(within(answer).getByText(/tiangong, china’s space station/i)).toBeInTheDocument()
+    expect(within(answer).getByText(/rises low in the west-southwest/i)).toBeInTheDocument()
+    expect(within(answer).getByText(/where the sun went down/i)).toBeInTheDocument()
+  })
+
+  it('draws a labelled sky map of the pass', async () => {
+    render(<App />)
+    expect(await screen.findByRole('img', { name: /sky map/i })).toBeInTheDocument()
+  })
+
+  it('lists the week as a board and keeps pre-dawn passes separate', async () => {
+    render(<App />)
+    const week = await screen.findByRole('region', { name: /next 7 evenings/i })
+    expect(within(week).getAllByRole('listitem').length).toBeGreaterThan(5)
+    expect(within(week).getByRole('button', { name: /before-dawn passes/i })).toBeInTheDocument()
+  })
+
+  it('says how old the orbit data is', async () => {
+    render(<App />)
+    expect(await screen.findByText(/orbit data from/i)).toBeInTheDocument()
+  })
+
   it('has no axe violations', async () => {
-    const { default: axe } = await import('axe-core')
     const { container } = render(<App />)
+    await screen.findByRole('region', { name: /tonight in fremont/i })
+    const { default: axe } = await import('axe-core')
     // jsdom has no layout engine, so contrast is left to Lighthouse in CI.
     const results = await axe.run(container, { rules: { 'color-contrast': { enabled: false } } })
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([])

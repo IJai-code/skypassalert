@@ -1,46 +1,107 @@
 @import 'tailwindcss';
 
-/* Brand tokens. One accent only (sunlit amber); see docs/PRODUCT.md#brand. */
-@theme {
-  --color-night: #0b1026;
-  --color-night-raised: #141b3a;
-  --color-night-line: #2a3566;
-  --color-ink: #e8ecf8;
-  --color-muted: #9aa4c2;
-  --color-accent: #ffc65c;
+/*
+ * Design tokens. Rules live in docs/DESIGN.md; the short version:
+ * - Amber means "the station" and nothing else.
+ * - Hierarchy comes from size and weight; color is for meaning.
+ * - Night mode swaps everything to dim red to protect dark-adapted eyes.
+ */
+:root {
+  --night: #080c1a;
+  --night-2: #0d1326;
+  --hair: rgb(150 165 205 / 0.16);
+  --hair-strong: rgb(150 165 205 / 0.3);
+  --ink: #eceff7;
+  --ink-2: #a9b2cc;
+  --ink-3: #737c99;
+  --station: #ffc65c;
+  --station-soft: rgb(255 198 92 / 0.28);
+  /* Sky darkness, from daylight to full night (tonight strip). */
+  --sky-day: #34508a;
+  --sky-civil: #233765;
+  --sky-nautical: #162246;
+  --sky-astro: #0c1330;
+  color-scheme: dark;
+}
 
-  /* System fonts only: zero font bytes on the critical path. Chinese falls back
-     to the platform's CJK face (PingFang SC on Apple, Noto Sans CJK on Android). */
+/* Red night mode: every color becomes a dim red so phones don't undo the
+   ~30 minutes it takes eyes to adapt to the dark. */
+:root[data-mode='night'] {
+  --night: #000;
+  --night-2: #0a0000;
+  --hair: rgb(170 30 20 / 0.28);
+  --hair-strong: rgb(170 30 20 / 0.5);
+  --ink: #c7362b;
+  --ink-2: #92241c;
+  --ink-3: #651812;
+  --station: #ff3b2e;
+  --station-soft: rgb(255 59 46 / 0.3);
+  --sky-day: #3a0a07;
+  --sky-civil: #2a0705;
+  --sky-nautical: #1a0403;
+  --sky-astro: #0d0201;
+}
+
+@theme inline {
+  --color-night: var(--night);
+  --color-night-2: var(--night-2);
+  --color-hair: var(--hair);
+  --color-hair-strong: var(--hair-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-station: var(--station);
+  --color-station-soft: var(--station-soft);
+}
+
+@theme {
   --font-sans:
     system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC',
     'Hiragino Sans GB', 'Noto Sans CJK SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  --breakpoint-wide: 64rem;
 }
 
 @layer base {
   html {
-    background-color: var(--color-night);
-    color: var(--color-ink);
+    background-color: var(--night);
+    color: var(--ink);
     -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
     min-height: 100dvh;
     font-family: var(--font-sans);
-    /* A sparse star field drawn with gradients: no image request. */
-    background-image:
-      radial-gradient(1px 1px at 12% 18%, rgb(232 236 248 / 0.7), transparent 60%),
-      radial-gradient(1px 1px at 78% 9%, rgb(232 236 248 / 0.55), transparent 60%),
-      radial-gradient(1.5px 1.5px at 64% 32%, rgb(232 236 248 / 0.6), transparent 60%),
-      radial-gradient(1px 1px at 30% 44%, rgb(232 236 248 / 0.4), transparent 60%),
-      radial-gradient(1px 1px at 88% 58%, rgb(232 236 248 / 0.45), transparent 60%),
-      radial-gradient(1px 1px at 6% 72%, rgb(232 236 248 / 0.35), transparent 60%),
-      radial-gradient(120% 60% at 50% 0%, #19224a 0%, transparent 70%);
-    background-attachment: fixed;
+    font-size: 1.0625rem;
+    line-height: 1.5;
+    transition:
+      background-color 0.4s,
+      color 0.4s;
   }
 
   :focus-visible {
-    outline: 3px solid var(--color-accent);
+    outline: 2px solid var(--ink);
     outline-offset: 3px;
-    border-radius: 4px;
+    border-radius: 3px;
+  }
+
+  button {
+    cursor: pointer;
+  }
+}
+
+@layer utilities {
+  /* Times line up in columns, like a departure board. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Small label voice, used sparingly: section names only. */
+  .label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-3);
   }
 }

@@ -53,12 +53,21 @@
 - Source files start with a header comment linking to their `docs/learn` chapter. Comments explain *why*. Keep functions small and names clear.
 
 ## Commands
-`npm run dev` · `npm test` · `npm run lint` · `npm run typecheck` · `npm run build` · `npm run check:size` · `npm run lighthouse` · `npm run ci` (everything except Lighthouse)
+`npm run dev` · `npm test` · `npm run coverage` · `npm run lint` · `npm run typecheck` · `npm run build` · `npm run check:size` · `npm run lighthouse` · `npm run ci` (everything except Lighthouse) · `npm run accuracy` · `npm run reference` (needs `.venv`, see README) · `npm run lab:<sidereal|shadow|pass|seasons>` · `npm run data:fetch` (one CelesTrak request; don't run it casually, the scheduled workflow owns fetching)
+
+## Things that bite
+- Engine tests that touch Node APIs need `// @vitest-environment node` at the top.
+- The engine's JSON imports need `with { type: 'json' }` so labs run under plain Node.
+- `satellite.js`'s wasm runtime is aliased out in `vite.config.ts` (D-017). Keep it that way.
+- The Data workflow pushes to `main` as a bot. Branch rules must let GitHub Actions bypass.
+- Design rules and banned patterns: `docs/DESIGN.md`. Read it before touching UI.
 
 ## Where things are
 | Need | File |
 |---|---|
 | Product, audience, brand, voice | `docs/PRODUCT.md` |
+| UI rules, tokens, components, device tiers, AR decision | `docs/DESIGN.md` |
+| Accuracy numbers | `docs/accuracy/phase2.md` |
 | Architecture, engine design, budgets, data pipeline | `docs/ARCHITECTURE.md` |
 | Growth system and launch plan | `docs/GROWTH.md`, `docs/growth/` |
 | Phases and acceptance criteria | `docs/ROADMAP.md` |

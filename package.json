@@ -20,12 +20,22 @@
     "format:check": "prettier --check .",
     "check:size": "node scripts/check-bundle-size.mjs",
     "lighthouse": "lhci autorun",
-    "icons": "node scripts/render-icons.mjs",
-    "ci": "npm run lint && npm run format:check && npm run typecheck && npm run test && npm run build && npm run check:size"
+    "icons": "node scripts/render-icons.mjs && node scripts/render-qr.mjs",
+    "ci": "npm run lint && npm run format:check && npm run typecheck && npm run test && npm run build && npm run check:size",
+    "coverage": "vitest run --coverage",
+    "accuracy": "WRITE_ACCURACY=1 vitest run src/engine/validation",
+    "reference": ".venv/bin/python validation/generate_reference.py",
+    "eop": "node scripts/build-eop.mjs",
+    "data:fetch": "node scripts/fetch-elements.mjs",
+    "lab:sidereal": "node scripts/labs/sidereal.ts",
+    "lab:shadow": "node scripts/labs/shadow.ts",
+    "lab:pass": "node scripts/labs/pass.ts",
+    "lab:seasons": "node scripts/labs/seasons.ts"
   },
   "dependencies": {
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "satellite.js": "7.1.0"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
@@ -37,12 +47,14 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2",
+    "@vitest/coverage-v8": "5.0.5",
     "axe-core": "4.14.0",
     "eslint": "10.13.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "globals": "17.13.0",
     "jsdom": "30.1.3",
     "prettier": "3.9.10",
+    "qrcode": "1.5.4",
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.0",
