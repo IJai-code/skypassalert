@@ -24,13 +24,16 @@ export type NightSky = {
   planets: PlanetSighting[]
 }
 
+/** A visible pass plus where the Moon is at its peak (for the sky map). */
+export type ForecastPass = VisiblePass & { moonAtPeak: MoonInfo }
+
 export type Forecast = {
   place: Place
   fromMs: number
   toMs: number
   propagatorId: string
   elements: ElementsInfo[]
-  passes: VisiblePass[]
+  passes: ForecastPass[]
   nights: NightSky[]
 }
 
@@ -62,6 +65,10 @@ export function forecast(req: ForecastRequest): Forecast {
     passes.push(...findPasses(sat, req.place, req.fromMs, toMs, { ...req.passOptions, eop }))
   }
   passes.sort((a, b) => a.start.unixMs - b.start.unixMs)
+  const withMoon: ForecastPass[] = passes.map((p) => ({
+    ...p,
+    moonAtPeak: moonAt(req.place, p.peak.unixMs, eop),
+  }))
 
   const tz = req.place.timeZone
   const firstKey = localDateKey(req.fromMs, tz)
@@ -84,7 +91,7 @@ export function forecast(req: ForecastRequest): Forecast {
     toMs,
     propagatorId: propagator.id,
     elements,
-    passes,
+    passes: withMoon,
     nights,
   }
 }

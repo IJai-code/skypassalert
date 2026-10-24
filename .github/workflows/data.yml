@@ -1,0 +1,76 @@
+name: Data
+
+# Orbital elements every 6 h (CelesTrak updates every 2 h; their policy asks
+# for one download per update at most). Earth-orientation data once a day.
+on:
+  schedule:
+    - cron: '17 */6 * * *' # elements
+    - cron: '47 3 * * *' # EOP (UT1 − UTC), daily per CelesTrak policy
+  workflow_dispatch:
+    inputs:
+      what:
+        description: 'What to refresh'
+        type: choice
+        options: [elements, eop, both]
+        default: elements
+
+permissions:
+  contents: write
+  issues: write
+  actions: write
+
+concurrency:
+  group: data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Fetch orbital elements (one request)
+        id: elements
+        if: github.event.schedule == '17 */6 * * *' || (github.event_name == 'workflow_dispatch' && inputs.what != 'eop')
+        run: node scripts/fetch-elements.mjs
+
+      - name: Fetch Earth orientation parameters (one request)
+        id: eop
+        if: github.event.schedule == '47 3 * * *' || (github.event_name == 'workflow_dispatch' && inputs.what != 'elements')
+        run: |
+          status=$(curl -sS -A "SkyPassAlert/0.2 (+https://skypassalert.com)" -o "$RUNNER_TEMP/eop.csv" -w '%{http_code}' https://celestrak.org/SpaceData/EOP-Last5Years.csv)
+          if [ "$status" != "200" ]; then echo "CelesTrak EOP returned HTTP $status. Not retrying."; exit 2; fi
+          node scripts/build-eop.mjs "$RUNNER_TEMP/eop.csv"
+
+      - name: Commit if changed
+        id: commit
+        run: |
+          git config user.name "skypassalert-data[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data data/archive src/engine/time/eop-data.json
+          if git diff --cached --quiet; then echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          git commit -m "data: refresh orbital data ($(date -u +%Y-%m-%dT%H:%MZ))"
+          git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      # Pushes made with GITHUB_TOKEN don't trigger other workflows, so start the deploy explicitly.
+      - name: Deploy the new data
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main
+
+      - name: Tell a human (CelesTrak policy: stop and report on errors)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Data fetch failed"
+          body="The scheduled data refresh failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. The site keeps serving the last good data and shows its age. Per CelesTrak's usage policy the job does not retry; check the log, then re-run by hand once the cause is understood."
+          gh label create data --color 0e8a16 --description "Orbital data pipeline" --force >/dev/null 2>&1 || true
+          existing=$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then gh issue comment "$existing" --body "$body"; else gh issue create --title "$title" --body "$body" --label data; fi

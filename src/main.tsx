@@ -4,10 +4,12 @@ import './index.css'
 import { App } from './App.tsx'
 
 const root = document.getElementById('root')
-if (!root) throw new Error('Missing #root element in index.html')
-
-createRoot(root).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+// Browsers that failed the inline support check in index.html see the static
+// fallback page instead; don't start the app underneath it.
+if (root && !document.documentElement.classList.contains('legacy')) {
+  createRoot(root).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  )
+}

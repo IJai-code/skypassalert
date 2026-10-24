@@ -2,10 +2,21 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { fileURLToPath } from 'node:url'
 
 // Custom domain at the root, so assets resolve from "/".
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: [
+      {
+        // Keep satellite.js's optional WebAssembly runtime (and its pthreads worker) out of the bundle.
+        find: /^#wasm-(single|multi)-thread$/,
+        replacement: fileURLToPath(new URL('./src/engine/propagate/no-wasm.ts', import.meta.url)),
+      },
+    ],
+  },
+  worker: { format: 'es' },
   build: {
     target: 'es2022',
     sourcemap: true,

@@ -1,6 +1,6 @@
-import { ComingSoon } from './pages/ComingSoon.tsx'
+import { Home } from './pages/Home.tsx'
 
-// Phase 1: a single placeholder page. Routing arrives with the MVP (Phase 3).
+// Phase 2: one screen. Routing arrives with place pages (Phase 3/5).
 export function App() {
-  return <ComingSoon />
+  return <Home />
 }
