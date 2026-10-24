@@ -1,0 +1,5 @@
+dist
+coverage
+.lighthouseci
+package-lock.json
+*.md

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+.lighthouseci/
+*.local
+.DS_Store
+.env
+.env.*
+*.log
+.vite/
