@@ -14,11 +14,11 @@ One phase per session. Phases 2+ each use their own branch and a PR, and stop fo
 | 8 | **Accuracy + credibility** | See below. |
 
 ## 1. Foundation
-- [ ] Public repo, MIT license, README, CLAUDE.md and docs/ skeleton.
-- [ ] CI green: lint, format, typecheck, test, build, JS budget, Lighthouse ≥90 ×4 (mobile).
-- [ ] Brand basics: palette, logo, favicon, placeholder "Look up tonight. Coming soon."
-- [ ] Deployed by Actions to Pages at https://skypassalert.com with HTTPS enforced. www → apex, http → https.
-- [ ] STATUS.md written.
+- [x] Public repo, MIT license, README, CLAUDE.md and docs/ skeleton.
+- [x] CI green: lint, format, typecheck, test, build, JS budget, Lighthouse ≥90 ×4 (mobile).
+- [x] Brand basics: palette, logo, favicon, placeholder "Look up tonight. Coming soon."
+- [x] Deployed by Actions to Pages at https://skypassalert.com with HTTPS enforced. www → apex, http → https.
+- [x] STATUS.md written.
 
 ## 2. Engine core
 - `src/engine` is framework-free with ≥90% line coverage.
