@@ -26,7 +26,11 @@
     "accuracy": "WRITE_ACCURACY=1 vitest run src/engine/validation",
     "reference": ".venv/bin/python validation/generate_reference.py",
     "eop": "node scripts/build-eop.mjs",
-    "data:fetch": "node scripts/fetch-elements.mjs"
+    "data:fetch": "node scripts/fetch-elements.mjs",
+    "lab:sidereal": "node scripts/labs/sidereal.ts",
+    "lab:shadow": "node scripts/labs/shadow.ts",
+    "lab:pass": "node scripts/labs/pass.ts",
+    "lab:seasons": "node scripts/labs/seasons.ts"
   },
   "dependencies": {
     "react": "19.3.1",

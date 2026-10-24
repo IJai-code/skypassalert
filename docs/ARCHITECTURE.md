@@ -3,7 +3,8 @@
 Static site on GitHub Pages. No backend. All prediction math runs in the browser (inside a Web Worker) and, at build time, in Node scripts that pre-render pages, OG images and calendar feeds. Both use the same engine code.
 
 ```
-CelesTrak GP (OMM JSON) ──(Action, every 6 h)──▶ data/elements/*.json  + data/archive/YYYY/MM/<ts>.json
+CelesTrak GP (OMM JSON) ──(Data Action, every 6 h)──▶ public/data/elements.json + data/archive/YYYY/MM/<ts>.json
+CelesTrak EOP (IERS)    ──(Data Action, daily)───────▶ src/engine/time/eop-data.json (bundled)
 GeoNames cities + zh names ──(one-time script)──▶ public/data/cities/*.json (lazy-loaded)
                                                    │
              ┌─────────────────────────────────────┼───────────────────────────────┐
@@ -20,6 +21,9 @@ src/
     time/        UTC↔JD, UT1 (ΔUT1 table), TT (ΔT), GMST
     frames/      TEME → ECEF (GMST rotation; polar motion documented as neglected) → geodetic (WGS-84) → topocentric az/el/range
     sun/         low-precision solar position (documented error), observer darkness
+    moon/        Schlyter lunar position + phase;  planets/ JPL approximate elements + magnitudes
+    sky/         per-instant geometry, sunset/twilight, Moon/planets tonight, pass ranking
+    describe/    angles and magnitudes → words (compass, fists, brightness, relative to sunset)
     shadow/      cylindrical and conical (umbra/penumbra) Earth-shadow models
     propagate/   Propagator interface; satellitejs-adapter.ts (TEMPORARY); sgp4/ (ours, Phase 4)
     passes/      pass finder: coarse scan + bracketed root-finding (Brent) for rise/set, golden-section/Brent for peak
@@ -52,7 +56,7 @@ docs/            product, architecture, decisions, learn chapters, growth assets
 - **Time:** we own UTC/UT1/TT/GMST conversions with tables and documented approximations. Local time comes from `Intl.DateTimeFormat` with IANA zones only, never fixed offsets. Tests cover DST transitions, the southern hemisphere, and unusual offsets (e.g. +05:45, +10:30/+11:00 Lord Howe).
 - **Validation (Phase 2+):** a CI job generates reference positions and az/el with Python Skyfield/sgp4 over thousands of random times and observers. Then Vitest compares and writes max and mean error to `docs/accuracy/`. We report the true numbers.
 
-## Data pipeline (Phase 5)
+## Data pipeline (minimal version live since Phase 2; see D-010)
 - **Scheduled Action** (cron every 6 h + `workflow_dispatch`):
   - One request per group per run: `https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=JSON`, with optional `visual` and `last-30-days`.
   - Pick ISS (`ISS (ZARYA)`, NORAD 25544) and Tiangong (`CSS (TIANHE)`, NORAD 48274) by name, with a NORAD-ID cross-check.
@@ -61,7 +65,8 @@ docs/            product, architecture, decisions, learn chapters, growth assets
   - Data updates every 2 h; a repeat download before then returns 403.
   - More than 50 errors in 2 h gets the IP firewalled.
   - So: stop on any non-200 response, never retry in a loop, and open or update a GitHub issue after N consecutive failures. The site keeps serving the last data and shows its age.
-- **Daily rebuild:** place pages (EN/zh), OG images, webcal feeds, sitemap.
+- **Deploy trigger:** pushes by `GITHUB_TOKEN` don't start other workflows, so the Data job calls `gh workflow run deploy.yml` after committing.
+- **Phase 5 adds:** a daily rebuild of place pages (EN/zh), OG images, webcal feeds, sitemap.
 
 ## Performance budget
 - **Initial route:** under **150 KB gzipped JS**, enforced by `scripts/check-bundle-size.mjs` in CI.

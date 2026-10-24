@@ -28,7 +28,8 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck
-      - run: npm test
+      - name: Tests with engine coverage thresholds
+        run: npm run coverage
       - run: npm run build
       - name: Initial-route JS budget (150 KB gzip)
         run: npm run check:size
@@ -37,6 +38,39 @@ jobs:
           name: dist
           path: dist
           retention-days: 7
+
+  validate:
+    name: Accuracy vs Skyfield (regenerated reference)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: validation/requirements.txt
+      # JPL's DE421 planetary ephemeris (17 MB): download once, then cache.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: validation/de421.bsp
+          key: de421-v1
+      - run: pip install -r validation/requirements.txt
+      - name: Regenerate reference values with Skyfield + sgp4
+        working-directory: validation
+        run: python generate_reference.py
+      - run: npm ci
+      - name: Compare the engine against the fresh reference and write the report
+        run: npm run accuracy
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: accuracy-report
+          path: docs/accuracy/phase2.md
+          retention-days: 30
 
   lighthouse:
     name: Lighthouse (mobile, all categories >= 90)

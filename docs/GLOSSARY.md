@@ -23,3 +23,12 @@ Short definitions. Each one links to the `docs/learn` chapter where it's explain
 | **IANA time zone** | Named zone such as `America/Los_Angeles` that encodes all historical and DST offset rules. We never use fixed offsets. |
 | **Root-finding** | Numerically solving f(t) = 0, e.g. "when does elevation − 10° = 0?" We use bracketing plus Brent's method. |
 | **CelesTrak** | Free public source of orbital elements run by Dr. T.S. Kelso. We follow its usage policy strictly. |
+| **ΔUT1** | UT1 − UTC, measured by the IERS and always within ±0.9 s. We use a daily table; 0.136 s of error moved observers ~60 m in our tests. |
+| **EOP** | Earth Orientation Parameters: ΔUT1 plus polar motion. CelesTrak republishes the IERS values daily. |
+| **Polar motion** | The rotation axis wanders ~10 m on the ground. We neglect it (≤ 15 m error). |
+| **OMM** | Orbit Mean-elements Message (CCSDS). Same information as a TLE, as named fields; handles 6-digit catalog numbers. |
+| **Phase angle** | Angle at an object between the Sun and the observer. Small = we see its lit face (brighter). |
+| **Standard magnitude** | A satellite's brightness at 1000 km, half lit. Fitted per object. |
+| **Brent's method** | Root-finding that mixes bisection (safe) with interpolation (fast). Our rise/set/shadow times. |
+| **Fist** | A fist at arm's length ≈ 10° of sky. Nine stacked from the horizon reach overhead. |
+| **Precession** | The 26,000-year wobble of Earth's axis: coordinates drift ~50″/year (0.36° from 2000 to 2026). |

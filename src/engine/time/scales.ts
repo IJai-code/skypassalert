@@ -8,7 +8,7 @@
 // at the equator, so 1 s of UT1 error moves the observer by ~0.4 km.
 import { MJD_OFFSET, SECONDS_PER_DAY } from '../math/constants.ts'
 import { jdUtc, mjdUtc } from './julian.ts'
-import defaultEop from './eop-data.json'
+import defaultEop from './eop-data.json' with { type: 'json' }
 
 /** [Unix ms when it takes effect, TAI − UTC in seconds]. IERS Bulletin C. */
 const LEAP_SECONDS: ReadonlyArray<readonly [number, number]> = [

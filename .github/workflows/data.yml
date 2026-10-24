@@ -64,7 +64,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run deploy.yml --ref main
 
-      - name: Tell a human (CelesTrak policy: stop and report on errors)
+      - name: 'Tell a human (CelesTrak policy: stop and report on errors)'
         if: failure()
         env:
           GH_TOKEN: ${{ github.token }}

@@ -1,63 +1,66 @@
 # Status
 
-_Last updated: 2026-10-24, end of Phase 1._
+_Last updated: 2026-10-24, end of Phase 2 (PR open, awaiting review)._
 
-## Done (Phase 1: Foundation)
-- Public repo https://github.com/IJai-code/skypassalert (MIT).
-- **Stack:**
-  - Vite 8, React 19, TypeScript 6 (strict, plus `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`), Tailwind 4.
-  - Vitest 5 with Testing Library and axe-core.
-  - ESLint 10 and Prettier.
-  - Exact versions pinned.
-- **Placeholder** at https://skypassalert.com:
-  - Tagline, a labelled example prediction, and what the app will do.
-  - A zh-Hans section, marked `needs-native-review`.
-  - Footer with source link, contact address and disclaimer.
-  - Original SVG logo, favicon, touch icon, and an animated pass arc (still for reduced-motion users).
-- **CI** (`.github/workflows/ci.yml`): lint → format → typecheck → tests (incl. axe) → build → initial-JS budget (150 KB gzip) → Lighthouse CI (mobile, all four categories ≥ 0.9).
-- **Deploy** (`.github/workflows/deploy.yml`): GitHub Actions → Pages. Custom domain `skypassalert.com`, HTTPS enforced.
-- **Numbers at the end of Phase 1:**
-  - Initial JS 68.9 KB gzip, of a 150 KB budget.
-  - Local Lighthouse (mobile, 3 runs): 100/100/100/100.
-- **Verified 2026-10-24:**
-  - `dig`: apex has the 4 GitHub Pages A records; `www` CNAME → `ijai-code.github.io.`
-  - `curl -I http://skypassalert.com` returns 301 → `https://skypassalert.com/`.
-  - `https://skypassalert.com` returns 200.
-  - `http://www.skypassalert.com` and `https://www.skypassalert.com` both return 301 → `https://skypassalert.com/`.
-  - The certificate covers the apex and www and expires 2027-01-22. GitHub renews it automatically.
-- **Docs:** CLAUDE.md, PRODUCT, ARCHITECTURE, GROWTH, ROADMAP, DECISIONS (D-001…D-008), MARKET (sourced), GLOSSARY, learn/00-start-here, growth/README, ASSETS, and the ENGINEERING_LOG and FIELD_LOG templates.
+## Done
+### Phase 1: Foundation (merged)
+Public repo, CI, the Pages deploy at https://skypassalert.com (HTTPS enforced, www → apex), docs skeleton.
 
-## Next (Phase 2: Engine core)
-Branch `feat/engine-core`. One PR, then stop for review.
-- `src/engine`:
-  - time (JD, UTC/UT1/TT, GMST) and frames (TEME→ECEF→geodetic→topocentric).
-  - Sun and darkness.
+### Phase 2: Engine core + redesign + device strategy (this PR)
+- **Engine** (`src/engine`, framework-free, 97.8% line coverage, CI-enforced ≥ 90%):
+  - Time scales with IERS ΔUT1.
+  - TEME → ECEF → geodetic → az/el.
+  - Sun, Moon and planets.
   - Cylindrical and conical shadow.
-  - Pass finder (scan + Brent).
-  - Magnitude model.
-  - `Propagator` interface plus a TEMPORARY satellite.js adapter (OMM JSON).
-- A Web Worker wrapper.
-- Validation: a Python Skyfield/sgp4 reference generator in CI, with max and mean errors written to `docs/accuracy/`.
-- Time-zone tests (DST, southern hemisphere, +05:45, Lord Howe).
-- Learn chapters 01–07 and the first labs.
+  - Pass finder with Brent root-finding.
+  - Brightness model calibrated to published values.
+  - Plain-language helpers.
+  - `Propagator` interface + TEMPORARY satellite.js adapter (OMM JSON).
+  - Runs in a Web Worker (17.7 KB gzipped, lazy).
+- **Accuracy vs Skyfield** (CI job regenerates the reference each push):
+
+  | Quantity | Max error |
+  |---|---|
+  | Satellite position | 14.9 m |
+  | Rise/set | 0.27 s |
+  | Sun | 39″ |
+  | Sunset | 3 s |
+  | Moon | 5.9′ |
+  | Planets | 4.6′ |
+
+  Full report: `docs/accuracy/phase2.md`.
+- **Cross-check vs Heavens-Above:** 15 real Fremont passes, including the 2026-11-01 DST change. Times match to ≤ 2 s.
+- **Live data:** the Data workflow fetches CelesTrak `GROUP=stations` every 6 h and EOP daily. It stops and opens an issue on any non-200, archives every fetch, and redeploys on change.
+- **Redesign** (`docs/DESIGN.md`): a live, real answer for Fremont.
+  - Tonight's best pass in plain words, a computed sky map, a tonight timeline with bedtime, and the week as a board.
+  - The Moon and planets, red night mode, a one-pass calendar reminder.
+  - In-app browser steps, a desktop QR handoff, and a static page for unsupported browsers.
+- **Budgets:** initial JS 78.4 KB gzipped (budget 150). Local Lighthouse mobile 100/100/100/100, CLS 0.
+- **Learning:** chapters 01–07, 09, 10 with worked examples from tonight's pass. Labs: `lab:sidereal`, `lab:shadow`, `lab:pass`, `lab:seasons`.
+- **Research answers:** why use this instead of a search, the camera/AR decision, device tiers. See `docs/DESIGN.md` §1, §6, §7 and `docs/MARKET.md`.
+
+## Next: Phase 3 (MVP v0.1)
+- Place picker: Bay Area presets, geolocation (on-device), GeoNames city search with GeoNames attribution in the footer.
+- Family mode settings (bedtime, kid wording); zh-Hans catalog for all copy.
+- Share card PNG with QR code; 14-day `.ics`.
+- /privacy, /about, SEO basics; pre-rendered first paint for the default place.
+- Soft launch to about 10 families.
 
 ## Human tasks pending
-| Who | Task | Why |
-|---|---|---|
-| Parent | In Porkbun → Email Forwarding for skypassalert.com, add `hello@skypassalert.com` → the inbox you choose. The forwarding MX records already exist; only the rule is needed. | The site footer links to this address. |
-| Ishaan | Read, in order: `CLAUDE.md` → `docs/PRODUCT.md` → `docs/ROADMAP.md` → `docs/ARCHITECTURE.md` → `docs/learn/00-start-here.md`. Write your first `ENGINEERING_LOG.md` entry. | Context for reviewing Phase 2. |
-| Ishaan | Open https://skypassalert.com on your phone and a parent's phone. Note anything that looks off. | First real-device check. |
-| Ishaan (optional) | Repo → Settings → Rules: add a ruleset on `main` requiring a PR and the `Lint, typecheck, test, build, budget` and `Lighthouse` checks. Admins can bypass. | Phases 2+ go through PRs; this makes CI a merge gate. |
+| Who | Task |
+|---|---|
+| **Ishaan** | **Tonight (Sat 2026-10-24), Fremont:** step outside at **7:32 PM**, face where the sun went down, look one fist to the left. Tiangong climbs almost straight overhead (80°) and fades out high in the east-northeast at 7:36:56. Note what you see in `FIELD_LOG.md`. |
+| Ishaan | Review the Phase 2 PR. Suggested reading order is in the PR's "Read this first". Run `npm run lab:seasons` (write your prediction first). |
+| Ishaan | Device check after merge (GitHub Pages has no PR previews; or use `npm run dev -- --host` on home Wi-Fi): iPhone Safari, an Android phone, and inside WeChat (send the link to yourself). Note anything that looks off. |
+| Parent | (From Phase 1, if not done) Porkbun email forwarding for `hello@skypassalert.com`. |
+| Ishaan (optional) | If you add a `main` ruleset requiring PRs, add **GitHub Actions** to its bypass list, or the Data workflow's commits will be rejected. |
 
-## Open Dependabot PRs
-- **TypeScript 6.0.3 → 7.0.2** (dev-tooling group): CI fails. TS 7 is a major release; typescript-eslint and the build may not support it yet. **Don't merge.** Phase 2 will evaluate it, or close it and pin TS 6 until the ecosystem catches up.
+## Housekeeping done this phase
+- Closed Dependabot's TypeScript 7 PR. Dependabot now ignores TypeScript majors until typescript-eslint supports TS 7 (D-006 / dependabot.yml).
 
 ## Risks and watch items
-- **CelesTrak:**
-  - It returns 403 for a repeat download within its 2 h update window and firewalls IPs with more than 50 errors in 2 h. GitHub runners share IPs.
-  - Plan: one request per group per run, stop on non-200, soft-fail and show data age, open an issue after repeated failures (Phase 5).
-- **TLE phase-out:** we use OMM JSON only (D-004).
-- **Scheduled workflows** in public repos are disabled after 60 days without repo activity. The data commits (Phase 5) keep the repo active; this file gets a check each phase.
-- **Calendar subscriptions:** Google refreshes about every 12–24 h (unofficial), and alarms in subscribed feeds may be dropped. To be tested on real devices in Phase 5; the one-off .ics is the alarm path.
-- **Competitor overlap** (see MARKET.md): no "first" or "only" claims in public copy.
-- **Tailwind sourcemap warning** at build (the plugin doesn't emit maps for generated CSS). Harmless; revisit if it becomes noisy.
+- **CelesTrak 403s from shared GitHub runner IPs** (one download per 2 h update window). The workflow soft-fails, opens an issue, and the site shows data age. Watch the first few days of scheduled runs.
+- **Scheduled workflows** in public repos pause after 60 days without repo activity. The data commits count as activity.
+- **Tiangong brightness:** two shadow-ending passes are ~1 mag fainter in our model than Heavens-Above's. Field observations will decide (06-brightness).
+- **Long-range passes:** predictions more than ~3 days out drift by minutes. The UI shows data age and an honest note.
+- Calendar subscription refresh and alarm behaviour (Phase 5) still need real-device testing.

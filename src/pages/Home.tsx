@@ -45,7 +45,7 @@ export function Home() {
     <div className="mx-auto min-h-dvh max-w-[34rem] px-5 wide:max-w-6xl wide:px-10">
       <Header placeName={place.name} dateLabel={formatDate(now, place.timeZone)} />
 
-      {fc.status === 'loading' && <Loading />}
+      {fc.status === 'loading' && <Loading placeName={place.name} />}
       {fc.status === 'error' && <LoadError message={fc.message} />}
 
       {ready && state && night && tonight && (
@@ -135,11 +135,19 @@ function useNightMode(): [boolean, (on: boolean) => void] {
   return [on, setOn]
 }
 
-function Loading() {
+/**
+ * First paint, before the worker answers (~100–300 ms): the same shapes as the
+ * real answer, so nothing jumps when it arrives (no layout shift) and the page
+ * already says what it is about.
+ */
+function Loading({ placeName }: { placeName: string }) {
   return (
-    <main className="mt-6" aria-busy="true">
-      <p className="text-base text-ink-2">Tonight</p>
-      <p className="mt-2 text-xl text-ink-3">Working out where the stations will be…</p>
+    <main className="mt-6 min-h-[88dvh] wide:mt-10" aria-busy="true">
+      <p className="text-base font-medium text-ink-2">Tonight in {placeName}</p>
+      <p className="tnum mt-1 text-[clamp(4rem,19vw,6.5rem)] leading-[0.95] font-semibold tracking-[-0.035em] text-ink-3/40">
+        –:––
+      </p>
+      <p className="mt-4 text-xl text-ink-3">Working out where the stations will be…</p>
     </main>
   )
 }
