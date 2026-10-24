@@ -29,6 +29,13 @@ export default tseslint.config(
     },
   },
   {
+    // Dense numeric kernels index fixed-size arrays whose bounds hold by
+    // construction (Legendre tables, catalogue rows, projected points). `!` there
+    // states that invariant; elsewhere it stays banned.
+    files: ['src/engine/magnetic/wmm.ts', 'src/engine/sky/scene.ts', 'src/sky/drawSky.ts'],
+    rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
+  },
+  {
     // In tests, `!` after a lookup is an assertion the test itself checks.
     files: ['**/*.test.{ts,tsx}'],
     rules: { '@typescript-eslint/no-non-null-assertion': 'off' },

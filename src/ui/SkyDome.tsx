@@ -1,6 +1,8 @@
-// The sky as a circle: edge = horizon, centre = straight up, north at the top
-// (map convention, which non-astronomers read more easily than star-chart
-// east-left). Everything drawn is computed from the actual pass.
+// The sky as a circle and a compass: edge = horizon, centre = straight up,
+// north at the top (map convention, which non-astronomers read more easily
+// than star-chart east-left), with a degree ring. With the phone's compass on,
+// the whole dial turns so the direction you face is at the top.
+// Everything drawn is computed from the actual pass.
 // Docs: docs/DESIGN.md#sky-dome
 import { useEffect, useId, useRef, useState } from 'react'
 import type { MoonInfo, VisiblePass } from '../engine/index.ts'
@@ -26,10 +28,22 @@ type Props = {
   moon: MoonInfo | null
   /** When set, draw the station's live position (look-now state). */
   nowMs?: number
+  /** Live true heading of the phone (degrees); rotates the dial. */
+  headingDeg?: number | null
   className?: string
+  children?: React.ReactNode
 }
 
-export function SkyDome({ pass, timeZone, sunsetAzDeg, moon, nowMs, className }: Props) {
+export function SkyDome({
+  pass,
+  timeZone,
+  sunsetAzDeg,
+  moon,
+  nowMs,
+  headingDeg,
+  className,
+  children,
+}: Props) {
   const titleId = useId()
   const track = pass.track.filter((p) => p.elDeg >= 0)
   const brightest = pass.brightestMagnitude
@@ -99,126 +113,173 @@ export function SkyDome({ pass, timeZone, sunsetAzDeg, moon, nowMs, className }:
           </radialGradient>
         </defs>
 
-        {/* Horizon and altitude rings */}
-        <circle
-          cx={C}
-          cy={C}
-          r={R}
-          fill="var(--night-2)"
-          stroke="var(--hair-strong)"
-          strokeWidth="1"
-        />
-        {[30, 60].map((el) => (
+        <g
+          transform={headingDeg != null ? `rotate(${-headingDeg} ${C} ${C})` : undefined}
+          style={{ transition: 'transform 0.15s linear' }}
+        >
+          {/* Horizon and altitude rings */}
           <circle
-            key={el}
             cx={C}
             cy={C}
-            r={(R * (90 - el)) / 90}
-            fill="none"
-            stroke="var(--hair)"
-            strokeDasharray="2 4"
+            r={R}
+            fill="var(--night-2)"
+            stroke="var(--hair-strong)"
+            strokeWidth="1"
           />
-        ))}
-        <text x={C + 4} y={C - (R * 60) / 90 + 12} className="fill-ink-3" fontSize="9">
-          30° up
-        </text>
-        <text x={C + 4} y={C - (R * 30) / 90 + 12} className="fill-ink-3" fontSize="9">
-          60°
-        </text>
-        <circle cx={C} cy={C} r="1.6" className="fill-ink-3" />
-
-        {/* Compass */}
-        {(
-          [
-            ['N', C, C - R - 8],
-            ['E', C + R + 10, C + 4],
-            ['S', C, C + R + 16],
-            ['W', C - R - 10, C + 4],
-          ] as const
-        ).map(([label, x, y]) => (
-          <text
-            key={label}
-            x={x}
-            y={y}
-            textAnchor="middle"
-            className="fill-ink-2"
-            fontSize="12"
-            fontWeight="600"
-          >
-            {label}
-          </text>
-        ))}
-
-        {sunsetAzDeg !== null && <SunsetMark azDeg={sunsetAzDeg} />}
-        {moon && moon.elDeg > 0 && <MoonMark moon={moon} />}
-
-        {/* The pass: brightness fades where the station dims into shadow */}
-        {track.slice(1).map((p, i) => {
-          const prev = track[i]
-          if (!prev) return null
-          const [x1, y1] = project(prev.azDeg, prev.elDeg)
-          const [x2, y2] = project(p.azDeg, p.elDeg)
-          const opacity = Math.min(1, Math.max(0.15, 1 - (p.magnitude - brightest) / 3))
-          return (
-            <line
-              key={p.unixMs}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke="var(--station)"
-              strokeOpacity={opacity}
-              strokeWidth="2.5"
-              strokeLinecap="round"
+          {[30, 60].map((el) => (
+            <circle
+              key={el}
+              cx={C}
+              cy={C}
+              r={(R * (90 - el)) / 90}
+              fill="none"
+              stroke="var(--hair)"
+              strokeDasharray="2 4"
             />
-          )
-        })}
-        {mid && midNext && <Chevron from={mid} to={midNext} />}
+          ))}
+          <text x={C + 4} y={C - (R * 60) / 90 + 12} className="fill-ink-3" fontSize="9">
+            30° up
+          </text>
+          <text x={C + 4} y={C - (R * 30) / 90 + 12} className="fill-ink-3" fontSize="9">
+            60°
+          </text>
+          <circle cx={C} cy={C} r="1.6" className="fill-ink-3" />
 
-        {/* Start, peak, end */}
-        <circle
-          cx={start[0]}
-          cy={start[1]}
-          r="5"
-          fill="var(--night)"
-          stroke="var(--station)"
-          strokeWidth="2"
-        />
-        <Label
-          at={start}
-          dir={dirAt(0)}
-          avoid={avoid}
-          text={formatTime(pass.start.unixMs, timeZone)}
-        />
-        <circle cx={peak[0]} cy={peak[1]} r="3" fill="var(--station)" />
-        <Label
-          at={peak}
-          dir={dirAt(peakIndex)}
-          avoid={[...avoid, start]}
-          text={`${Math.round(pass.peak.elDeg)}° up`}
-          subtle
-        />
-        {pass.end.reason === 'enters-shadow' ? (
+          {/* Degree ring: a tick every 10°, numbers every 30° between the cardinals */}
+          {Array.from({ length: 36 }, (_, i) => i * 10).map((deg) => {
+            const a = (deg * Math.PI) / 180
+            const major = deg % 90 === 0
+            const r1 = R
+            const r2 = R - (major ? 9 : deg % 30 === 0 ? 6 : 3.5)
+            return (
+              <line
+                key={deg}
+                x1={C + r1 * Math.sin(a)}
+                y1={C - r1 * Math.cos(a)}
+                x2={C + r2 * Math.sin(a)}
+                y2={C - r2 * Math.cos(a)}
+                stroke="var(--hair-strong)"
+                strokeWidth={major ? 1.5 : 1}
+              />
+            )
+          })}
+          {[30, 60, 120, 150, 210, 240, 300, 330].map((deg) => {
+            const a = (deg * Math.PI) / 180
+            return (
+              <text
+                key={deg}
+                x={C + (R - 16) * Math.sin(a)}
+                y={C - (R - 16) * Math.cos(a) + 3}
+                textAnchor="middle"
+                fontSize="8"
+                className="fill-ink-3 tnum"
+              >
+                {deg}
+              </text>
+            )
+          })}
+
+          {/* Compass */}
+          {(
+            [
+              ['N', C, C - R - 8],
+              ['E', C + R + 10, C + 4],
+              ['S', C, C + R + 16],
+              ['W', C - R - 10, C + 4],
+            ] as const
+          ).map(([label, x, y]) => (
+            <text
+              key={label}
+              x={x}
+              y={y}
+              textAnchor="middle"
+              className="fill-ink-2"
+              fontSize="12"
+              fontWeight="600"
+            >
+              {label}
+            </text>
+          ))}
+
+          {sunsetAzDeg !== null && <SunsetMark azDeg={sunsetAzDeg} />}
+          {moon && moon.elDeg > 0 && <MoonMark moon={moon} />}
+
+          {/* The pass: brightness fades where the station dims into shadow */}
+          {track.slice(1).map((p, i) => {
+            const prev = track[i]
+            if (!prev) return null
+            const [x1, y1] = project(prev.azDeg, prev.elDeg)
+            const [x2, y2] = project(p.azDeg, p.elDeg)
+            const opacity = Math.min(1, Math.max(0.15, 1 - (p.magnitude - brightest) / 3))
+            return (
+              <line
+                key={p.unixMs}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke="var(--station)"
+                strokeOpacity={opacity}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+            )
+          })}
+          {mid && midNext && <Chevron from={mid} to={midNext} />}
+
+          {/* Start, peak, end */}
           <circle
-            cx={end[0]}
-            cy={end[1]}
-            r="4"
-            fill="none"
+            cx={start[0]}
+            cy={start[1]}
+            r="5"
+            fill="var(--night)"
             stroke="var(--station)"
-            strokeOpacity="0.5"
-            strokeDasharray="1.5 2"
+            strokeWidth="2"
           />
-        ) : (
-          <circle cx={end[0]} cy={end[1]} r="2.5" fill="var(--station)" fillOpacity="0.5" />
-        )}
+          <Label
+            at={start}
+            dir={dirAt(0)}
+            avoid={avoid}
+            text={formatTime(pass.start.unixMs, timeZone)}
+          />
+          <circle cx={peak[0]} cy={peak[1]} r="3" fill="var(--station)" />
+          <Label
+            at={peak}
+            dir={dirAt(peakIndex)}
+            avoid={[...avoid, start]}
+            text={`${Math.round(pass.peak.elDeg)}° up`}
+            subtle
+          />
+          {pass.end.reason === 'enters-shadow' ? (
+            <circle
+              cx={end[0]}
+              cy={end[1]}
+              r="4"
+              fill="none"
+              stroke="var(--station)"
+              strokeOpacity="0.5"
+              strokeDasharray="1.5 2"
+            />
+          ) : (
+            <circle cx={end[0]} cy={end[1]} r="2.5" fill="var(--station)" fillOpacity="0.5" />
+          )}
 
-        {livePoint && (
-          <g transform={`translate(${project(livePoint.azDeg, livePoint.elDeg).join(' ')})`}>
-            <circle r="14" fill={`url(#${titleId}-glow)`} />
-            <circle r="4" fill="var(--station)" />
-          </g>
+          {livePoint && (
+            <g transform={`translate(${project(livePoint.azDeg, livePoint.elDeg).join(' ')})`}>
+              <circle r="14" fill={`url(#${titleId}-glow)`} />
+              <circle r="4" fill="var(--station)" />
+            </g>
+          )}
+        </g>
+        {headingDeg != null && (
+          <path
+            d={`M ${C - 6} ${C - R - 3} L ${C + 6} ${C - R - 3} L ${C} ${C - R + 9} Z`}
+            fill="var(--ink)"
+            aria-hidden="true"
+          />
         )}
       </svg>
+      {children}
       <figcaption className="mt-2 flex items-center justify-between gap-4 text-sm text-ink-3">
         <span>Edge of the circle is the horizon; the centre is straight up.</span>
         {!prefersReducedMotion() && (
