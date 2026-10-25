@@ -153,3 +153,18 @@ Node 22.18+ strips TypeScript types natively. Labs (`scripts/labs/*.ts`) import 
 - **Choice:** feature-detect and apply per-target presets, always report what was applied, and make stacking the quality engine.
 - Offer the phone's own camera for the best single shot on iPhone, followed by enhancement and labelling.
 - **Sky Sync** corrects the compass from the image itself.
+
+## D-024 Product redesign: tabs and cards, following Ishaan's reference (2026-10-25)
+- **Context:** the full-screen-sky layout (D-021) still read as unfinished. Ishaan shared a reference of a professional astronomy app.
+- **Choice:** a tabbed app (Tonight, Sky, Camera, Passes) with image cards and a cyan action colour; amber stays reserved for the station.
+- **Tradeoffs:** a second colour breaks the earlier single-accent rule, so the roles are documented (D-024 in DESIGN.md §0).
+
+## D-025 NASA public-domain photos for objects (2026-10-25)
+- Moon (LRO), Saturn and Jupiter (Cassini), Mars (Viking), Venus (Mariner 10), the ISS (Expedition 56 crew) and the Milky Way (ISS crew; cropped to remove a spacecraft label).
+- Re-encoded as WebP, 3–26 KB each, credited on each card and in ASSETS.md, with no logos and no implied endorsement.
+- Tiangong has no public-domain photo, so its cards show its own path drawn on the sky.
+
+## D-026 Choose your place now (pulled forward from Phase 3) (2026-10-25)
+- "Use my location" uses the browser's geolocation. The position is rounded to ~100 m and named after the nearest city; it never leaves the phone.
+- City search runs on a bundled GeoNames list: every US city ≥ 15k people plus the world ≥ 120k (8,319 cities, 253 KB gzipped, loaded only when searching).
+- The chosen place is saved in localStorage (a per-device convenience). Fremont stays the default, so the 3-second rule holds on first open.

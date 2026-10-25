@@ -2,15 +2,22 @@
 
 How SkyPassAlert looks, sounds and behaves, and why. Every rule traces to something we observed or measured. Last reviewed 2026-10-24 (Phase 2).
 
-## 0. Current layout (2026-10-24, D-021)
-The whole screen is the live sky (`SkyStage`), switched like a camera app:
-- **Sky:** tonight's pass drawn on the real sky; drag to look around.
-- **Find it:** live; the phone's sensors drive the view and an arrow guides you.
-- **Camera:** Sky Camera with Sky Sync, stacking and per-target recipes.
+## 0. Current direction (2026-10-25, D-024)
+Ishaan supplied a reference: a polished astronomy app with deep teal-navy surfaces, rounded image cards, a cyan action colour, carousels and a bottom tab bar. SkyPassAlert now follows that product language:
+- **Four tabs:**
+  - **Tonight:** cards.
+  - **Sky:** live "find it" view.
+  - **Camera:** Sky Camera.
+  - **Passes:** the week.
+- **Colour roles:** cyan (`--action`) = things you tap; amber (`--station`) = the station and its path, nothing else.
+- **Cards** (20 px radius, subtle border, top-lit gradient) carry real content:
+  - The hero is tonight's pass drawn on the real sky.
+  - Pass thumbnails are each pass's own sky picture.
+  - Object cards use NASA public-domain photos (credited on the card).
+- **Typography:** Archivo bold for display and numbers; system face for body.
+- **Camera overlay is minimal** (`drawSky` style `clean`): thin rings on the Moon and planets, compass letters, and one cyan target tag. No constellation lines or star labels over the live image.
 
-Also:
-- An **instrument heading tape** (aircraft-style) sits at the top in Archivo condensed numerals.
-- Everything else lives in a **sheet**: its first glance is one big condensed time plus four readouts (height, brightness, duration, path), then details, the compass, tonight, the week and the sky.
+Sections 2–3 below record the earlier "departure board" phase; the honesty and data-first principles still apply, and the "no cards" rule is retired.
 
 ## 1. What we learned from looking at the field
 

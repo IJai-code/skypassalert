@@ -42,10 +42,11 @@ type Props = {
   focus: ForecastPass | null
   catalog: StarCatalog | null
   red: boolean
-  /** Pixels at the bottom covered by the info sheet in SKY mode. */
+  /** Pixels at the bottom covered by the tab bar. */
   bottomInset: number
   mode: StageMode
-  onModeChange: (m: StageMode) => void
+  /** Camera tab: start aimed at this target (e.g. "moon" from the Tonight screen). */
+  initialTargetId?: string | null
 }
 
 const ALIGNED = 8
@@ -58,7 +59,7 @@ export function SkyStage({
   red,
   bottomInset,
   mode,
-  onModeChange,
+  initialTargetId = null,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -96,7 +97,7 @@ export function SkyStage({
     aligned: false,
     arrow: null,
   })
-  const [target, setTarget] = useState<Target | null>(null)
+  const [pickedTarget, setTarget] = useState<Target | null>(null)
   const [sync, setSync] = useState<{ name: string; at: number } | null>(null)
   const [applied, setApplied] = useState<Applied | null>(null)
   const [capturing, setCapturing] = useState<{ done: number; total: number } | null>(null)
@@ -133,6 +134,13 @@ export function SkyStage({
       ),
     [place, catalog, passes, clockMinute],
   )
+  // Until you pick one: the target asked for, else the brightest non-station object.
+  const target =
+    pickedTarget ??
+    targets.find((t) => t.id === initialTargetId) ??
+    targets.find((t) => t.kind !== 'trail') ??
+    targets[0] ??
+    null
 
   // Mode switch: iOS grants motion access only inside the tap.
   const switchMode = async (m: StageMode) => {
@@ -147,7 +155,7 @@ export function SkyStage({
       void resetPreset(camTrackRef.current)
     }
     setSimMs(null)
-    onModeChange(m)
+    void m
   }
 
   // Apply camera settings for the chosen target.
@@ -235,10 +243,15 @@ export function SkyStage({
         catalog,
         opaque: !(mode === 'camera' && camStatus === 'on'),
         red,
-        track: focus?.track ?? null,
+        track: mode === 'camera' ? (target?.pass?.track ?? null) : (focus?.track ?? null),
         station,
         formatMinute: (ms) => formatTime(ms, place.timeZone).replace(/\s?[AP]M$/, ''),
         labels: true,
+        style: mode === 'camera' && camStatus === 'on' ? 'clean' : 'full',
+        highlight:
+          mode === 'camera' && target
+            ? { azDeg: target.azDeg, elDeg: target.elDeg, label: target.name }
+            : null,
       })
 
       if (performance.now() - lastGuide > 200) {
@@ -586,7 +599,7 @@ export function SkyStage({
             {/* Viewfinder brackets */}
             <div
               aria-hidden="true"
-              className={`pointer-events-none absolute top-1/2 left-1/2 size-20 -translate-x-1/2 -translate-y-1/2 transition-colors ${guide.aligned ? 'text-station' : 'text-white/60'}`}
+              className={`pointer-events-none absolute top-1/2 left-1/2 size-20 -translate-x-1/2 -translate-y-1/2 transition-colors ${guide.aligned ? 'text-action' : 'text-white/60'}`}
             >
               {[
                 'top-0 left-0 border-t-2 border-l-2',
@@ -606,7 +619,7 @@ export function SkyStage({
                 }}
               >
                 <svg width="46" height="46" viewBox="-23 -23 46 46">
-                  <path d="M 15 0 L -9 -12 L -3 0 L -9 12 Z" fill="var(--station)" />
+                  <path d="M 15 0 L -9 -12 L -3 0 L -9 12 Z" fill="var(--action)" />
                 </svg>
               </div>
             )}
@@ -614,21 +627,9 @@ export function SkyStage({
         )}
       </div>
 
-      {/* Top: brand, place, heading tape, guidance */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/70 via-black/30 to-transparent pt-[max(env(safe-area-inset-top),12px)] pb-6">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4">
-          <a
-            href="/"
-            className="pointer-events-auto hud-caps text-white/90"
-            aria-label="SkyPassAlert home"
-          >
-            SkyPassAlert
-          </a>
-          <p className="hud-caps text-white/75">
-            {place.name} · {formatTime(clock, place.timeZone)}
-          </p>
-        </div>
-        <div className="mx-auto mt-2 max-w-xl px-4">
+      {/* Top: heading tape and one clear instruction */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/65 via-black/25 to-transparent pt-[max(env(safe-area-inset-top),12px)] pb-8">
+        <div className="mx-auto max-w-xl px-4">
           <HeadingTape
             headingDeg={hud.heading}
             elDeg={hud.el}
@@ -638,63 +639,62 @@ export function SkyStage({
           />
         </div>
         {live && (
-          <div className="mx-auto mt-3 max-w-xl px-5">
+          <div className="mx-auto mt-4 flex max-w-xl flex-col items-center px-5 text-center">
             <p
               aria-live="polite"
-              className={`text-[1.65rem] leading-tight font-semibold tracking-tight ${guide.aligned ? 'text-station' : ''}`}
+              className={`display rounded-full px-4 py-2 text-[1.0625rem] backdrop-blur-md ${guide.aligned ? 'bg-action text-action-ink' : 'bg-black/45 text-white'}`}
             >
               {guide.text}
             </p>
-            <p className="hud mt-0.5 text-[15px] text-white/70">{guide.sub}</p>
-            <div className="mt-1 flex flex-wrap gap-2">
-              {useDrag && (
-                <span className="hud-caps text-white/55">
-                  {sensors.status === 'denied'
-                    ? 'Motion access off · drag to look'
-                    : 'No compass here · drag to look'}
-                </span>
-              )}
+            <p className="mt-1.5 text-[0.8125rem] text-white/75">{guide.sub}</p>
+            <div className="mt-2 flex flex-wrap justify-center gap-2">
               {mode === 'camera' && synced && sync && (
-                <span className="hud-caps text-station">Synced to {sync.name}</span>
+                <span className="display rounded-full bg-action/90 px-3 py-1 text-[0.75rem] text-action-ink">
+                  Synced to {sync.name}
+                </span>
               )}
               {mode === 'camera' &&
                 !synced &&
                 sensors.status === 'active' &&
                 camStatus === 'on' && (
-                  <span className="hud-caps text-white/55">
-                    Sky Sync: point at the Moon or a bright planet
+                  <span className="rounded-full bg-black/45 px-3 py-1 text-[0.75rem] text-white/75 backdrop-blur-md">
+                    Aim at the Moon or a bright planet to sync
                   </span>
                 )}
+              {useDrag && (
+                <span className="rounded-full bg-black/45 px-3 py-1 text-[0.75rem] text-white/70 backdrop-blur-md">
+                  {sensors.status === 'denied'
+                    ? 'Motion access is off: drag to look around'
+                    : 'No compass on this device: drag to look around'}
+                </span>
+              )}
             </div>
           </div>
-        )}
-        {!live && focus && (
-          <p className="hud-caps mx-auto mt-3 max-w-6xl px-4 text-white/60">
-            Sky at {formatTime(focus.peak.unixMs, place.timeZone)} · drag to look around
-          </p>
         )}
       </div>
 
       {/* Bottom controls */}
       <div
         className="absolute inset-x-0 flex flex-col items-center gap-3 px-4"
-        style={{ bottom: live ? 'max(env(safe-area-inset-bottom), 16px)' : bottomInset + 12 }}
+        style={{ bottom: bottomInset + 12 }}
       >
         {mode === 'camera' && (
           <>
             {recipe && (
-              <div className="glass w-full max-w-md rounded-xl px-3 py-2 text-sm">
+              <div className="w-full max-w-md rounded-2xl bg-black/50 px-4 py-2.5 text-sm ring-1 ring-white/10 backdrop-blur-md">
                 <button
                   type="button"
                   aria-expanded={showRecipe}
                   onClick={() => setShowRecipe((v) => !v)}
                   className="flex w-full items-baseline justify-between gap-3 text-left"
                 >
-                  <span className="hud-caps text-station">{recipe.title} tips</span>
+                  <span className="display text-[0.875rem] text-action">{recipe.title} tips</span>
                   <span className="hud text-[13px] text-white/75">
                     {applied ? applied.label.split(' (')[0] : 'Auto'}
                   </span>
-                  <span className="hud-caps text-white/55">{showRecipe ? 'Less' : 'More'}</span>
+                  <span className="text-[0.75rem] font-semibold text-white/60">
+                    {showRecipe ? 'Less' : 'More'}
+                  </span>
                 </button>
                 {showRecipe && (
                   <div className="mt-1.5 space-y-1.5">
@@ -721,10 +721,14 @@ export function SkyStage({
                   type="button"
                   aria-pressed={target?.id === t.id}
                   onClick={() => setTarget(t)}
-                  className={`shrink-0 rounded-lg border px-3 py-1.5 text-left ${target?.id === t.id ? 'border-station bg-station/15' : 'glass border-white/15'}`}
+                  className={`shrink-0 rounded-2xl px-3.5 py-2 text-left ring-1 backdrop-blur-md ${target?.id === t.id ? 'bg-action text-action-ink ring-action' : 'bg-black/45 text-white ring-white/15'}`}
                 >
-                  <span className="hud block text-[15px] font-semibold">{t.name}</span>
-                  <span className="hud block text-[11px] text-white/60">{t.detail}</span>
+                  <span className="display block text-[0.9375rem]">{t.name}</span>
+                  <span
+                    className={`block text-[0.6875rem] ${target?.id === t.id ? 'text-action-ink/75' : 'text-white/60'}`}
+                  >
+                    {t.detail}
+                  </span>
                 </button>
               ))}
               {!targets.length && (
@@ -736,7 +740,7 @@ export function SkyStage({
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="hud-caps w-24 text-left text-white/80"
+                className="w-24 rounded-full bg-black/45 px-3 py-2 text-center text-[0.75rem] font-semibold text-white ring-1 ring-white/15 backdrop-blur-md"
               >
                 Phone camera
               </button>
@@ -772,7 +776,7 @@ export function SkyStage({
                   </svg>
                 )}
               </button>
-              <label className="hud-caps flex w-24 flex-col items-end text-white/80">
+              <label className="flex w-24 flex-col items-end text-[0.75rem] font-semibold text-white/80">
                 Zoom
                 <input
                   type="range"
@@ -780,7 +784,7 @@ export function SkyStage({
                   max={90}
                   value={vfovLive}
                   onChange={(e) => setVfovLive(Number(e.target.value))}
-                  className="mt-1 w-20 accent-[var(--station)]"
+                  className="mt-1 w-20 accent-[var(--action)]"
                   aria-label="Match the drawn sky to the camera’s zoom"
                 />
               </label>
@@ -831,28 +835,6 @@ export function SkyStage({
             </button>
           </div>
         )}
-
-        {/* Mode switch, camera-app style */}
-        <div role="tablist" aria-label="View" className="glass flex gap-1 rounded-full p-1">
-          {(
-            [
-              ['sky', 'Sky'],
-              ['find', 'Find it'],
-              ['camera', 'Camera'],
-            ] as const
-          ).map(([m, label]) => (
-            <button
-              key={m}
-              role="tab"
-              type="button"
-              aria-selected={mode === m}
-              onClick={() => void switchMode(m)}
-              className={`hud-caps rounded-full px-4 py-2 ${mode === m ? 'bg-white text-black' : 'text-white/80'}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
       </div>
 
       {result && <CaptureResult capture={result} onClose={() => setResult(null)} />}

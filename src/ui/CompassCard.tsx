@@ -16,6 +16,8 @@ type Props = {
   place: Place
   sunsetAzDeg: number | null
   nowMs: number
+  /** The section already has a visible title (cards on the Tonight screen). */
+  titleHidden?: boolean
 }
 
 const canHaveCompass = () =>
@@ -23,7 +25,7 @@ const canHaveCompass = () =>
   'DeviceOrientationEvent' in window &&
   (navigator.maxTouchPoints ?? 0) > 0
 
-export function CompassCard({ pass, place, sunsetAzDeg, nowMs }: Props) {
+export function CompassCard({ pass, place, sunsetAzDeg, nowMs, titleHidden = false }: Props) {
   const decl = useMemo(() => declinationDeg(place.latDeg, place.lonDeg, nowMs), [place, nowMs])
   const [enabled, setEnabled] = useState(false)
   const sensors = useOrientation(enabled, decl)
@@ -53,7 +55,7 @@ export function CompassCard({ pass, place, sunsetAzDeg, nowMs }: Props) {
 
   return (
     <section aria-labelledby="which-way">
-      <h2 id="which-way" className="label">
+      <h2 id="which-way" className={titleHidden ? 'sr-only' : 'label'}>
         Which way to look
       </h2>
       <SkyDome
@@ -96,7 +98,7 @@ export function CompassCard({ pass, place, sunsetAzDeg, nowMs }: Props) {
             if (await requestMotionPermission()) setEnabled(true)
             else sensors.setStatus('denied')
           }}
-          className="mt-4 rounded-md border border-hair-strong px-4 py-2.5 text-[0.9375rem] font-medium hover:bg-night-2"
+          className="mt-4 w-full rounded-2xl bg-white/[0.06] py-3 text-[0.9375rem] font-semibold text-action ring-1 ring-hair"
         >
           Turn on live compass
         </button>
