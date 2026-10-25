@@ -116,12 +116,19 @@ export function TonightScreen(props: Props) {
           type="button"
           onClick={() => props.onNightMode(!props.nightMode)}
           aria-pressed={props.nightMode}
-          aria-label="Red night light"
-          className={`grid size-11 place-items-center rounded-full ring-1 ring-hair ${props.nightMode ? 'bg-action text-action-ink' : 'bg-surface-2 text-ink-2'}`}
+          title="Night vision: dim red light keeps your eyes adjusted to the dark"
+          className={`flex h-11 items-center gap-1.5 rounded-full px-3.5 text-[0.8125rem] font-semibold ring-1 ring-hair ${props.nightMode ? 'bg-action text-action-ink' : 'bg-surface-2 text-ink-2'}`}
         >
-          <IconRed className="size-5" />
+          <IconRed className="size-4.5" />
+          Night vision
         </button>
       </header>
+      {props.nightMode && (
+        <p className="-mt-1 mb-3 text-[0.8125rem] text-ink-2">
+          Night vision is on: dim red light doesn’t spoil your eyes’ adjustment to the dark (it
+          takes ~30 minutes to fully adapt). Tap it again for normal colours.
+        </p>
+      )}
 
       <div className="wide:grid wide:grid-cols-[1.15fr_1fr] wide:gap-6">
         <div>

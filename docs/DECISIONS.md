@@ -168,3 +168,12 @@ Node 22.18+ strips TypeScript types natively. Labs (`scripts/labs/*.ts`) import 
 - "Use my location" uses the browser's geolocation. The position is rounded to ~100 m and named after the nearest city; it never leaves the phone.
 - City search runs on a bundled GeoNames list: every US city ≥ 15k people plus the world ≥ 120k (8,319 cities, 253 KB gzipped, loaded only when searching).
 - The chosen place is saved in localStorage (a per-device convenience). Fremont stays the default, so the 3-second rule holds on first open.
+
+## D-027 The live sky always shows the night sky (2026-10-25)
+- **Context:** Ishaan expects pointing the phone to show what's really up there, even when it's hidden by daylight or clouds.
+- **Choice:** the Sky and Camera views paint a night sky with every object at its real position, at any hour, with a "Daytime" note.
+- **Other fixes:**
+  - Pattern lines are drawn only between drawn stars.
+  - The ground uses the exact horizon line of the rectilinear camera; the old polygon left grey wedges.
+  - The camera is eased every frame (time-based smoothing) at a capped 1.5× pixel ratio for smooth motion on phones.
+  - A "Point with your phone" button re-asks for motion access if the first request didn't take.

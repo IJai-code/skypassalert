@@ -39,6 +39,8 @@ export function useOrientation(enabled: boolean, declinationDeg: number) {
   const camRef = useRef<CameraBasis | null>(null)
   const iosOffset = useRef<number | null>(null)
   const calibration = useRef(0)
+  // Bumped by restart(): re-attaches listeners after a late permission grant.
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     if (!enabled) return
@@ -66,7 +68,7 @@ export function useOrientation(enabled: boolean, declinationDeg: number) {
         return // relative-only data can't point at the real sky
       }
       const next = cameraFromDevice(e.alpha, e.beta, e.gamma, screenAngle(), headingFix)
-      camRef.current = smoothBasis(camRef.current, next, 0.3)
+      camRef.current = smoothBasis(camRef.current, next, 0.6)
       if (!got) {
         got = true
         setStatus('active')
@@ -85,7 +87,7 @@ export function useOrientation(enabled: boolean, declinationDeg: number) {
       if (hasAbsolute) window.removeEventListener('deviceorientationabsolute', onAbs)
       window.removeEventListener('deviceorientation', onRel)
     }
-  }, [enabled, declinationDeg])
+  }, [enabled, declinationDeg, attempt])
 
   /** Shift the heading so the camera's current direction becomes `trueAzDeg`. */
   const calibrateTo = useCallback((trueAzDeg: number) => {
@@ -110,6 +112,11 @@ export function useOrientation(enabled: boolean, declinationDeg: number) {
     accuracyDeg,
     calibrateTo,
     nudgeYaw,
+    restart: () => {
+      iosOffset.current = null
+      setStatus('idle')
+      setAttempt((a) => a + 1)
+    },
     calibrationDeg: () => calibration.current,
   }
 }
