@@ -26,6 +26,7 @@ Each engine source file starts with a header comment linking back to its chapter
 | 09 | `09-accuracy.md` | How wrong are we, and how do we know? Reference tests and field data. | 2 ✓ (field data: 8) |
 | 10 | `10-sky-objects.md` | The Moon and planets: something to see every night. | 2 ✓ |
 | 11 | `11-compass.md` | Pointing a phone at the real sky: sensors, magnetic declination, projection. | 2.5 ✓ |
+| 13 | `13-sky-check.md` | Sky Check: telling clouds from a broken app. | 2.8 ✓ |
 | 12 | `12-sky-camera.md` | Sky Camera: sync from the image, stacking, enhancement, what browsers allow. | 2.6 ✓ |
 
 ## Labs: "predict, then run"
