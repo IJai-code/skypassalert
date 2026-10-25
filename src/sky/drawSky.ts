@@ -32,6 +32,12 @@ export type DrawOptions = {
    * so the real sky stays the hero.
    */
   style?: 'full' | 'clean'
+  /**
+   * Live sky views: always paint the night sky (stars, Moon, planets at their
+   * real positions) even in daylight, like looking through the blue. Pictures
+   * of a pass keep the real twilight.
+   */
+  alwaysNight?: boolean
   /** Ring and label the thing being aimed at. */
   highlight?: { azDeg: number; elDeg: number; label: string } | null
 }
@@ -110,8 +116,9 @@ export function drawSky(ctx: CanvasRenderingContext2D, o: DrawOptions): void {
   ctx.clearRect(0, 0, W, H)
 
   // 1. Sky gradient, oriented along the projected vertical so it follows roll.
+  const sunForLook = o.alwaysNight ? Math.min(scene.sun.elDeg, -16) : scene.sun.elDeg
   if (o.opaque) {
-    const c = skyColors(scene.sun.elDeg)
+    const c = skyColors(sunForLook)
     const fAz = Math.atan2(cam.forward[0], cam.forward[1]) * (180 / Math.PI)
     const hz = P(enu(fAz, 0)) ?? { x: W / 2, y: H * 1.2 }
     const zen = P(enu(fAz, 60)) ?? { x: W / 2, y: -H }
@@ -137,7 +144,9 @@ export function drawSky(ctx: CanvasRenderingContext2D, o: DrawOptions): void {
   }
 
   // 2. Stars, faint first so bright ones sit on top.
-  const lim = limitingMagnitude(scene.sun.elDeg)
+  const lim = o.alwaysNight
+    ? Math.max(4.0, limitingMagnitude(scene.sun.elDeg))
+    : limitingMagnitude(scene.sun.elDeg)
   const clean = o.style === 'clean'
   if (o.catalog && !clean) {
     const { stars, lines, named } = o.catalog
@@ -156,7 +165,8 @@ export function drawSky(ctx: CanvasRenderingContext2D, o: DrawOptions): void {
       for (const [a, b] of pairs) {
         const pa = pos[a]
         const pb = pos[b]
-        if (!pa || !pb) continue
+        // Only join stars that are actually drawn: lines with no stars read as stray shapes.
+        if (!pa || !pb || stars[a]![2] > lim || stars[b]![2] > lim) continue
         if (Math.hypot(pa.x - pb.x, pa.y - pb.y) > Math.max(W, H)) continue
         ctx.beginPath()
         ctx.moveTo(pa.x, pa.y)
@@ -340,7 +350,41 @@ function drawHorizon(ctx: CanvasRenderingContext2D, o: DrawOptions, pal: Pal) {
     const p = project(enu(fAz + d, 0), cam, vp)
     if (p) pts.push(p)
   }
-  if (o.opaque && pts.length > 1) {
+  if (o.opaque && vp.projection === 'rectilinear') {
+    // A straight camera turns the horizon (the plane z = 0) into an exact line:
+    // u_f + X·u_r + Y·u_u = 0 in normalised screen coords. Fill the side where
+    // that sum is negative (below the horizon) by clipping the screen rectangle.
+    const k = vp.height / 2 / Math.tan(((vp.vfovDeg / 2) * Math.PI) / 180)
+    const cx = vp.cx ?? vp.width / 2
+    const cy = vp.cy ?? vp.height / 2
+    const below = (x: number, y: number) =>
+      cam.forward[2] + ((x - cx) / k) * cam.right[2] - ((y - cy) / k) * cam.up[2]
+    const rect: Array<[number, number]> = [
+      [0, 0],
+      [vp.width, 0],
+      [vp.width, vp.height],
+      [0, vp.height],
+    ]
+    const poly: Array<[number, number]> = []
+    for (let i = 0; i < 4; i++) {
+      const a = rect[i]!
+      const b = rect[(i + 1) % 4]!
+      const fa = below(a[0], a[1])
+      const fb = below(b[0], b[1])
+      if (fa < 0) poly.push(a)
+      if (fa < 0 !== fb < 0) {
+        const t = fa / (fa - fb)
+        poly.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t])
+      }
+    }
+    if (poly.length >= 3) {
+      ctx.fillStyle = pal.ground
+      ctx.beginPath()
+      poly.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)))
+      ctx.closePath()
+      ctx.fill()
+    }
+  } else if (o.opaque && pts.length > 1) {
     const fwdEl = Math.asin(cam.forward[2]) * (180 / Math.PI)
     if (fwdEl > -40) {
       const first = pts[0]!

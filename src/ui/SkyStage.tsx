@@ -23,6 +23,7 @@ import {
   type Viewport,
 } from '../sky/projection.ts'
 import { requestMotionPermission, useOrientation } from '../sky/useOrientation.ts'
+import { smoothBasis } from '../sky/orientation.ts'
 import { useCamera } from '../sky/useCamera.ts'
 import { HeadingTape } from './hud/HeadingTape.tsx'
 import { RECIPES, targetsFor, type Target } from '../photo/targets.ts'
@@ -50,6 +51,7 @@ type Props = {
 }
 
 const ALIGNED = 8
+const touchDevice = typeof navigator !== 'undefined' && (navigator.maxTouchPoints ?? 0) > 0
 
 export function SkyStage({
   place,
@@ -85,7 +87,7 @@ export function SkyStage({
   const [vfovLive, setVfovLive] = useState(66)
   const [simMs, setSimMs] = useState<number | null>(null)
   const [clock, setClock] = useState(() => Date.now())
-  const [hud, setHud] = useState({ heading: 0, el: 0 })
+  const [hud, setHud] = useState({ heading: 0, el: 0, day: false })
   const [guide, setGuide] = useState<{
     text: string
     sub: string
@@ -177,12 +179,15 @@ export function SkyStage({
     let lastGuide = 0
     let lastClock = 0
     let lastStatic = ''
+    let lastFrame = 0
+    let shown: CameraBasis | null = null
     const loop = () => {
       raf = requestAnimationFrame(loop)
       const canvas = canvasRef.current
       const wrap = wrapRef.current
       if (!canvas || !wrap) return
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      // Live views redraw every frame: cap the pixel ratio to keep phones smooth.
+      const dpr = Math.min(window.devicePixelRatio || 1, live ? 1.5 : 2)
       const w = wrap.clientWidth
       const h = wrap.clientHeight
       if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
@@ -213,10 +218,20 @@ export function SkyStage({
             drag.current.el + (Math.min(75, Math.max(12, station.elDeg)) - drag.current.el) * 0.08,
         }
       }
-      const cam: CameraBasis =
-        !useDrag && sensors.camRef.current
-          ? sensors.camRef.current
-          : basisLookingAt(drag.current.az, drag.current.el)
+      // Sensor view: ease towards the latest reading every frame (time-based, so
+      // it's equally smooth at 60 or 120 Hz and never lags more than ~0.1 s).
+      let cam: CameraBasis
+      const raw = !useDrag ? sensors.camRef.current : null
+      if (raw) {
+        const nowT = performance.now()
+        const dt = lastFrame ? Math.min(100, nowT - lastFrame) : 16
+        lastFrame = nowT
+        shown = smoothBasis(shown, raw, 1 - Math.exp(-dt / 70))
+        cam = shown
+      } else {
+        shown = null
+        cam = basisLookingAt(drag.current.az, drag.current.el)
+      }
       // SKY mode: a wide, undistorted view with the horizon above the info sheet.
       const visibleH = Math.max(200, h - bottomInset)
       const vp: Viewport = live
@@ -248,6 +263,7 @@ export function SkyStage({
         formatMinute: (ms) => formatTime(ms, place.timeZone).replace(/\s?[AP]M$/, ''),
         labels: true,
         style: mode === 'camera' && camStatus === 'on' ? 'clean' : 'full',
+        alwaysNight: live,
         highlight:
           mode === 'camera' && target
             ? { azDeg: target.azDeg, elDeg: target.elDeg, label: target.name }
@@ -257,10 +273,11 @@ export function SkyStage({
       if (performance.now() - lastGuide > 200) {
         lastGuide = performance.now()
         const f = azEl(cam.forward)
+        const day = scene.sun.elDeg > -6
         setHud((hh) =>
-          Math.abs(hh.heading - f.azDeg) < 0.3 && Math.abs(hh.el - f.elDeg) < 0.3
+          Math.abs(hh.heading - f.azDeg) < 0.3 && Math.abs(hh.el - f.elDeg) < 0.3 && hh.day === day
             ? hh
-            : { heading: f.azDeg, el: f.elDeg },
+            : { heading: f.azDeg, el: f.elDeg, day },
         )
         if (!live) return
         const tgt =
@@ -661,11 +678,35 @@ export function SkyStage({
                     Aim at the Moon or a bright planet to sync
                   </span>
                 )}
+              {useDrag && touchDevice && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (await requestMotionPermission()) sensors.restart()
+                    else sensors.setStatus('denied')
+                  }}
+                  className="pointer-events-auto display rounded-full bg-action px-4 py-1.5 text-[0.8125rem] text-action-ink"
+                >
+                  Point with your phone
+                </button>
+              )}
               {useDrag && (
                 <span className="rounded-full bg-black/45 px-3 py-1 text-[0.75rem] text-white/70 backdrop-blur-md">
                   {sensors.status === 'denied'
-                    ? 'Motion access is off: drag to look around'
-                    : 'No compass on this device: drag to look around'}
+                    ? 'Motion access is off. Drag to look around'
+                    : touchDevice
+                      ? 'Or drag to look around'
+                      : 'Drag to look around'}
+                </span>
+              )}
+              {!useDrag && (
+                <span className="rounded-full bg-black/45 px-3 py-1 text-[0.75rem] text-white/75 backdrop-blur-md">
+                  Live · following your phone
+                </span>
+              )}
+              {hud.day && (
+                <span className="rounded-full bg-black/45 px-3 py-1 text-[0.75rem] text-white/75 backdrop-blur-md">
+                  Daytime: showing what’s behind the blue sky
                 </span>
               )}
             </div>
