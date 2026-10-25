@@ -6,6 +6,7 @@ export type CameraStatus = 'off' | 'starting' | 'on' | 'blocked'
 
 export function useCamera(on: boolean) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const trackRef = useRef<MediaStreamTrack | null>(null)
   const [status, setStatus] = useState<Exclude<CameraStatus, 'off'>>('starting')
 
   useEffect(() => {
@@ -24,6 +25,7 @@ export function useCamera(on: boolean) {
           return
         }
         stream = s
+        trackRef.current = s.getVideoTracks()[0] ?? null
         if (videoRef.current) {
           videoRef.current.srcObject = s
           void videoRef.current.play().catch(() => undefined)
@@ -36,9 +38,10 @@ export function useCamera(on: boolean) {
     return () => {
       cancelled = true
       stream?.getTracks().forEach((t) => t.stop())
+      trackRef.current = null
       setStatus('starting')
     }
   }, [on])
 
-  return { videoRef, status: (on ? status : 'off') as CameraStatus }
+  return { videoRef, trackRef, status: (on ? status : 'off') as CameraStatus }
 }

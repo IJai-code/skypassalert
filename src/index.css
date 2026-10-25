@@ -1,5 +1,16 @@
 @import 'tailwindcss';
 
+/* Archivo (SIL OFL 1.1, public/fonts/Archivo-OFL.txt), cut down to Latin,
+   weights 500–800 and widths 62–100%. Used for instrument readouts: times,
+   bearings, labels. Body copy stays in the system face for legibility. */
+@font-face {
+  font-family: 'Archivo';
+  src: url('/fonts/archivo-var.woff2') format('woff2');
+  font-weight: 500 800;
+  font-stretch: 62% 100%;
+  font-display: swap;
+}
+
 /*
  * Design tokens. Rules live in docs/DESIGN.md; the short version:
  * - Amber means "the station" and nothing else.
@@ -59,6 +70,7 @@
     system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC',
     'Hiragino Sans GB', 'Noto Sans CJK SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
   --breakpoint-wide: 64rem;
+  --font-hud: 'Archivo', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
 @layer base {
@@ -91,6 +103,28 @@
 }
 
 @layer utilities {
+  /* Instrument voice: condensed, tabular, tight. Times, bearings, readouts. */
+  .hud {
+    font-family: var(--font-hud);
+    font-stretch: 72%;
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: 0.01em;
+  }
+  .hud-caps {
+    font-family: var(--font-hud);
+    font-stretch: 80%;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.6875rem;
+  }
+  /* Frosted panel over the live sky. */
+  .glass {
+    background: color-mix(in srgb, var(--night) 78%, transparent);
+    backdrop-filter: blur(18px) saturate(1.2);
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  }
+
   /* Times line up in columns, like a departure board. */
   .tnum {
     font-variant-numeric: tabular-nums;

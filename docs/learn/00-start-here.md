@@ -26,6 +26,7 @@ Each engine source file starts with a header comment linking back to its chapter
 | 09 | `09-accuracy.md` | How wrong are we, and how do we know? Reference tests and field data. | 2 ✓ (field data: 8) |
 | 10 | `10-sky-objects.md` | The Moon and planets: something to see every night. | 2 ✓ |
 | 11 | `11-compass.md` | Pointing a phone at the real sky: sensors, magnetic declination, projection. | 2.5 ✓ |
+| 12 | `12-sky-camera.md` | Sky Camera: sync from the image, stacking, enhancement, what browsers allow. | 2.6 ✓ |
 
 ## Labs: "predict, then run"
 Labs are small scripts run with `npm run lab:<name>` (they run the real engine with Node's built-in TypeScript support). Each one asks you to **write down a prediction first** (e.g. "how many seconds does GMST gain on solar time per day?"), then runs the code and shows the answer. Keep your predictions in `ENGINEERING_LOG.md`. The misses are the interesting part.

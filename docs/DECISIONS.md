@@ -134,3 +134,22 @@ Node 22.18+ strips TypeScript types natively. Labs (`scripts/labs/*.ts`) import 
 - Mag 4.5 is about what a suburban sky shows.
 - Precessed to date; proper motion ignored (under 10″/yr for nearly all of them).
 - Also powers the "passes right past Vega" landmark cue.
+
+## D-021 The app is the sky; information lives in a sheet (2026-10-24)
+- **Context:** Ishaan found the page-of-sections layout generic.
+- **Choice:** the live sky fills the screen, with a camera-app mode switch (Sky / Find it / Camera) and an instrument heading tape. Everything else sits in a bottom sheet with peek, half and full heights (a side panel on wide screens).
+- **Why:**
+  - It puts the unique thing, *your* sky, first.
+  - It borrows from pro camera and maps apps instead of web templates.
+- **Tradeoff:** more state to manage and test. The SKY mode redraw is throttled to changes only (Lighthouse TBT 0).
+
+## D-022 Archivo for instrument readouts (2026-10-24)
+- Archivo (SIL OFL 1.1), instanced to weights 500–800 and widths 62–100%, Latin subset: 45 KB WOFF2, preloaded.
+- Used condensed for times, bearings and labels. Body text stays in the system face.
+- A deliberate, characterful choice in place of the default system look.
+
+## D-023 Sky Camera: manual controls where allowed, stacking everywhere, native camera on iPhone (2026-10-24)
+- Safari can't set exposure, ISO or focus, and the web can't drive the iOS Camera app. Chrome on many Android phones can.
+- **Choice:** feature-detect and apply per-target presets, always report what was applied, and make stacking the quality engine.
+- Offer the phone's own camera for the best single shot on iPhone, followed by enhancement and labelling.
+- **Sky Sync** corrects the compass from the image itself.

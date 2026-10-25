@@ -2,6 +2,16 @@
 
 How SkyPassAlert looks, sounds and behaves, and why. Every rule traces to something we observed or measured. Last reviewed 2026-10-24 (Phase 2).
 
+## 0. Current layout (2026-10-24, D-021)
+The whole screen is the live sky (`SkyStage`), switched like a camera app:
+- **Sky:** tonight's pass drawn on the real sky; drag to look around.
+- **Find it:** live; the phone's sensors drive the view and an arrow guides you.
+- **Camera:** Sky Camera with Sky Sync, stacking and per-target recipes.
+
+Also:
+- An **instrument heading tape** (aircraft-style) sits at the top in Archivo condensed numerals.
+- Everything else lives in a **sheet**: its first glance is one big condensed time plus four readouts (height, brightness, duration, path), then details, the compass, tonight, the week and the sky.
+
 ## 1. What we learned from looking at the field
 
 We used competitors on a phone-sized screen (375 px) on 2026-10-24. Sources and dates are in `docs/MARKET.md`.

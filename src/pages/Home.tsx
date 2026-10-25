@@ -1,6 +1,6 @@
-// The one screen. It opens on a picture of tonight's pass as you'll see it,
-// with the time on it; then how to find it, a live compass, the rest of the
-// night and the week. "Find it in the sky" opens Sky View.
+// The app: the whole screen is your sky (SkyStage), and everything else lives
+// in a sheet over it, the way a camera or maps app works rather than a page
+// of sections. The sheet's first glance is tonight's answer.
 // Docs: docs/DESIGN.md
 import { useEffect, useMemo, useState } from 'react'
 import type { ForecastPass } from '../engine/index.ts'
@@ -8,24 +8,21 @@ import { nearestLandmark, skyScene } from '../engine/sky/scene.ts'
 import { DEFAULT_PLACE } from '../presets.ts'
 import { useForecast, useNow } from '../lib/hooks.ts'
 import { homeState } from '../lib/state.ts'
-import { formatDate } from '../lib/format.ts'
-import { answerModel, Details, Headline } from '../ui/Answer.tsx'
-import { Postcard } from '../ui/Postcard.tsx'
+import { answerModel, Details, Peek } from '../ui/Answer.tsx'
 import { CompassCard } from '../ui/CompassCard.tsx'
 import { TonightStrip, passKey } from '../ui/TonightStrip.tsx'
 import { WeekBoard } from '../ui/WeekBoard.tsx'
 import { AlsoTonight } from '../ui/AlsoTonight.tsx'
 import { DataAge } from '../ui/DataAge.tsx'
-import { TakeItOutside } from '../ui/TakeItOutside.tsx'
 import { Footer } from '../ui/Chrome.tsx'
-import { Logo } from '../brand/Logo.tsx'
-import { SkyView } from '../ui/SkyView.tsx'
+import { SkyStage, type StageMode } from '../ui/SkyStage.tsx'
+import { Sheet, type SheetState } from '../ui/Sheet.tsx'
 import { useStarCatalog } from '../sky/useStarCatalog.ts'
 import { requestMotionPermission } from '../sky/useOrientation.ts'
 
 const BEDTIME = '21:30' // family-mode default; configurable in v0.1
 const NO_PASSES: never[] = []
-const HERO = 'h-[min(78dvh,46rem)] min-h-[30rem]'
+const PEEK_PX = 296
 
 export function Home() {
   const place = DEFAULT_PLACE
@@ -33,7 +30,9 @@ export function Home() {
   const catalog = useStarCatalog()
   const [focus, setFocus] = useState<ForecastPass | null>(null)
   const [nightMode, setNightMode] = useNightMode()
-  const [skyView, setSkyView] = useState<{ sensors: boolean } | null>(null)
+  const [mode, setMode] = useState<StageMode>('sky')
+  const [sheet, setSheet] = useState<SheetState>('peek')
+  const wide = useWide()
 
   const ready = fc.status === 'ready' ? fc.forecast : null
   const now = useNow(ready?.passes ?? NO_PASSES)
@@ -56,97 +55,79 @@ export function Home() {
     return nearestLandmark(shown.track, skyScene(place, shown.peak.unixMs, catalog), catalog)
   }, [shown, catalog, place])
 
-  const openSkyView = async () => {
-    // iOS only grants motion access inside the tap that asks for it.
-    const sensors = await requestMotionPermission()
-    setSkyView({ sensors })
+  // Motion permission has to be requested inside the tap (iOS).
+  const goLive = async (m: StageMode) => {
+    await requestMotionPermission()
+    setMode(m)
+    setSheet('peek')
   }
-
-  const overlay = (content: React.ReactNode) => (
-    <HeroOverlay placeName={place.name} dateLabel={formatDate(now, tz)}>
-      {content}
-    </HeroOverlay>
-  )
 
   return (
     <div className="min-h-dvh">
-      {/* Hero: tonight's sky with the answer on it */}
-      {shown && model ? (
-        <Postcard
-          pass={shown}
-          place={place}
-          catalog={catalog}
-          red={nightMode}
-          nowMs={now}
-          className={HERO}
-        >
-          {overlay(<Headline model={model} timeZone={tz} nowMs={now} />)}
-        </Postcard>
-      ) : (
-        <div className={`relative bg-[linear-gradient(to_top,#18244a,#080c1a_70%)] ${HERO}`}>
-          {overlay(
-            fc.status === 'error' ? (
-              <div>
-                <h1 className="text-2xl font-semibold">We couldn’t load the orbit data.</h1>
-                <p className="mt-2 text-white/75">
-                  Check your connection and reload. ({fc.message})
-                </p>
-              </div>
-            ) : model ? (
-              <Headline model={model} timeZone={tz} nowMs={now} />
-            ) : (
-              <div aria-busy="true">
-                <p className="text-base font-medium text-white/80">Tonight in {place.name}</p>
-                <p className="tnum mt-1 text-[clamp(4.25rem,21vw,7rem)] leading-[0.92] font-semibold tracking-[-0.04em] text-white/25">
-                  –:––
-                </p>
-                <p className="mt-3 text-lg text-white/60">
-                  Working out where the stations will be…
-                </p>
-              </div>
-            ),
-          )}
-        </div>
-      )}
+      <SkyStage
+        place={place}
+        passes={ready?.passes ?? NO_PASSES}
+        focus={shown}
+        catalog={catalog}
+        red={nightMode}
+        bottomInset={wide ? 0 : PEEK_PX}
+        mode={mode}
+        onModeChange={(m) => {
+          setMode(m)
+          if (m === 'sky') setSheet('peek')
+        }}
+      />
 
-      <div className="mx-auto max-w-[34rem] px-5 wide:max-w-6xl wide:px-10">
-        {ready && model && night && tonight ? (
-          <main className="wide:grid wide:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] wide:gap-16">
-            <div className="pt-8">
+      <Sheet state={sheet} onState={setSheet} hidden={mode !== 'sky'}>
+        {fc.status === 'error' ? (
+          <div className="pt-2">
+            <h1 className="text-2xl font-semibold">We couldn’t load the orbit data.</h1>
+            <p className="mt-2 text-ink-2">Check your connection and reload. ({fc.message})</p>
+          </div>
+        ) : !ready || !model || !night || !tonight ? (
+          <div aria-busy="true" className="pt-1">
+            <p className="hud-caps text-ink-2">Tonight · {place.name}</p>
+            <p className="hud mt-1 text-[5.5rem] leading-[0.86] font-bold text-ink-3/50 [font-stretch:62%]">
+              –:––
+            </p>
+            <p className="mt-2 text-ink-3">Working out where the stations will be…</p>
+          </div>
+        ) : (
+          <main>
+            <Peek model={model} timeZone={tz} nowMs={now} />
+            <div className="mt-7">
               <Details
                 model={model}
                 nights={ready.nights}
                 landmark={landmark}
                 placeName={place.name}
                 timeZone={tz}
-                onFindIt={openSkyView}
+                onFindIt={() => void goLive('find')}
+                onCamera={() => void goLive('camera')}
                 onClearFocus={() => setFocus(null)}
                 nightMode={nightMode}
                 onNightMode={setNightMode}
               />
-              {shown && (
-                <div className="mt-6">
-                  <DataAge
-                    epochMs={
-                      ready.elements.find((e) => e.noradId === shown.noradId)?.epochMs ?? now
-                    }
-                    nowMs={now}
-                  />
-                </div>
-              )}
-              {shown && (
-                <div className="mt-12">
-                  <CompassCard
-                    pass={shown}
-                    place={place}
-                    sunsetAzDeg={night.evening.sunsetAzDeg}
-                    nowMs={now}
-                  />
-                </div>
-              )}
             </div>
-
-            <div className="mt-14 wide:mt-8">
+            {shown && (
+              <div className="mt-6">
+                <DataAge
+                  epochMs={ready.elements.find((e) => e.noradId === shown.noradId)?.epochMs ?? now}
+                  nowMs={now}
+                />
+              </div>
+            )}
+            {shown && (
+              <div className="mt-12">
+                <CompassCard
+                  pass={shown}
+                  place={place}
+                  sunsetAzDeg={night.evening.sunsetAzDeg}
+                  nowMs={now}
+                />
+              </div>
+            )}
+            <div className="mt-12">
               <TonightStrip
                 evening={tonight.evening}
                 passes={ready.passes}
@@ -154,77 +135,39 @@ export function Home() {
                 bedtime={BEDTIME}
                 selectedKey={shown ? passKey(shown) : undefined}
               />
-              <WeekBoard
-                passes={ready.passes}
-                timeZone={tz}
-                nowMs={now}
-                selectedKey={focus ? passKey(focus) : undefined}
-                onSelect={(p) => {
-                  setFocus(p)
-                  window.scrollTo({ top: 0, behavior: 'smooth' })
-                }}
-              />
-              <AlsoTonight night={tonight} timeZone={tz} />
-              <div className="mt-12">
-                <TakeItOutside />
-              </div>
             </div>
+            <WeekBoard
+              passes={ready.passes}
+              timeZone={tz}
+              nowMs={now}
+              selectedKey={focus ? passKey(focus) : undefined}
+              onSelect={(p) => {
+                setFocus(p)
+                setSheet('peek')
+              }}
+            />
+            <AlsoTonight night={tonight} timeZone={tz} />
+            <Footer />
           </main>
-        ) : (
-          // Reserve space while loading so nothing jumps (CLS 0).
-          <div className="min-h-[60dvh]" />
         )}
-        <Footer />
-      </div>
-
-      {skyView && shown && (
-        <SkyView
-          pass={shown}
-          place={place}
-          sensorsAllowed={skyView.sensors}
-          onClose={() => setSkyView(null)}
-        />
-      )}
+      </Sheet>
     </div>
   )
 }
 
-function HeroOverlay({
-  placeName,
-  dateLabel,
-  children,
-}: {
-  placeName: string
-  dateLabel: string
-  children: React.ReactNode
-}) {
-  return (
-    <>
-      <header className="absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-black/55 to-transparent">
-        <div className="mx-auto flex max-w-[34rem] items-center justify-between gap-4 px-5 py-4 wide:max-w-6xl wide:px-10">
-          <a
-            href="/"
-            className="flex items-center gap-2.5 rounded-sm text-white"
-            aria-label="SkyPassAlert home"
-          >
-            <Logo size={26} title="" />
-            <span className="text-[0.9375rem] font-semibold tracking-tight">SkyPassAlert</span>
-          </a>
-          <p className="text-right text-sm leading-tight text-white">
-            <span className="block font-medium">{placeName}</span>
-            <span className="block text-white/65">{dateLabel}</span>
-          </p>
-        </div>
-      </header>
-      <section
-        aria-labelledby="answer"
-        aria-live="polite"
-        className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-[var(--night)] via-[color-mix(in_srgb,var(--night)_65%,transparent)] to-transparent pt-28 pb-6 text-white"
-      >
-        <div className="mx-auto max-w-[34rem] px-5 wide:max-w-6xl wide:px-10">{children}</div>
-      </section>
-    </>
+function useWide() {
+  const q = '(min-width: 64rem)'
+  const [wide, setWide] = useState(
+    () => typeof window !== 'undefined' && (window.matchMedia?.(q).matches ?? false),
   )
+  useEffect(() => {
+    const m = window.matchMedia?.(q)
+    if (!m) return
+    const on = () => setWide(m.matches)
+    m.addEventListener('change', on)
+    return () => m.removeEventListener('change', on)
+  }, [])
+  return wide
 }
 
 function useNightMode(): [boolean, (on: boolean) => void] {
