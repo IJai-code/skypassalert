@@ -26,9 +26,18 @@ import { requestMotionPermission, useOrientation } from '../sky/useOrientation.t
 import { smoothBasis } from '../sky/orientation.ts'
 import { useCamera } from '../sky/useCamera.ts'
 import { HeadingTape } from './hud/HeadingTape.tsx'
+import { IconCamera } from './app/Icons.tsx'
 import { RECIPES, targetsFor, type Target } from '../photo/targets.ts'
 import { applyPreset, resetPreset, type Applied } from '../photo/cameraControl.ts'
 import { measureSync } from '../photo/sync.ts'
+import {
+  frameStats,
+  judge,
+  settle,
+  type Condition,
+  type Expected,
+  type Verdict,
+} from '../photo/conditions.ts'
 import type { ShotKind } from '../photo/stack.ts'
 import type { StackRequest, StackResponse } from '../photo/stack.worker.ts'
 import { CaptureResult, type Capture } from './CaptureResult.tsx'
@@ -69,11 +78,12 @@ export function SkyStage({
   const [decl] = useState(() => declinationDeg(place.latDeg, place.lonDeg, Date.now()))
   // Every route into a live mode asks for motion permission in its own tap first.
   const sensors = useOrientation(live, decl)
+  const [arOn, setArOn] = useState(false)
   const {
     videoRef: camVideoRef,
     trackRef: camTrackRef,
     status: camStatus,
-  } = useCamera(mode === 'camera')
+  } = useCamera(mode === 'camera' || (mode === 'find' && arOn))
   const useDrag = !live || sensors.status !== 'active'
 
   // Drag camera: starts facing where tonight's pass begins.
@@ -87,6 +97,7 @@ export function SkyStage({
   const [vfovLive, setVfovLive] = useState(66)
   const [simMs, setSimMs] = useState<number | null>(null)
   const [clock, setClock] = useState(() => Date.now())
+  const [check, setCheck] = useState<(Verdict & { settled: Condition }) | null>(null)
   const [hud, setHud] = useState({ heading: 0, el: 0, day: false })
   const [guide, setGuide] = useState<{
     text: string
@@ -143,6 +154,9 @@ export function SkyStage({
     targets.find((t) => t.kind !== 'trail') ??
     targets[0] ??
     null
+  // In the Sky tab you aim at tonight's pass unless you pick something else.
+  const aiming = mode === 'camera' || pickedTarget !== null
+  const cameraOn = mode === 'camera' || (mode === 'find' && arOn)
 
   // Mode switch: iOS grants motion access only inside the tap.
   const switchMode = async (m: StageMode) => {
@@ -256,16 +270,16 @@ export function SkyStage({
         cam,
         scene,
         catalog,
-        opaque: !(mode === 'camera' && camStatus === 'on'),
+        opaque: !(cameraOn && camStatus === 'on'),
         red,
-        track: mode === 'camera' ? (target?.pass?.track ?? null) : (focus?.track ?? null),
+        track: aiming ? (target?.pass?.track ?? null) : (focus?.track ?? null),
         station,
         formatMinute: (ms) => formatTime(ms, place.timeZone).replace(/\s?[AP]M$/, ''),
         labels: true,
-        style: mode === 'camera' && camStatus === 'on' ? 'clean' : 'full',
+        style: cameraOn && camStatus === 'on' ? 'clean' : 'full',
         alwaysNight: live,
         highlight:
-          mode === 'camera' && target
+          aiming && target
             ? { azDeg: target.azDeg, elDeg: target.elDeg, label: target.name }
             : null,
       })
@@ -281,7 +295,7 @@ export function SkyStage({
         )
         if (!live) return
         const tgt =
-          mode === 'camera' && target
+          aiming && target
             ? { azDeg: target.azDeg, elDeg: target.elDeg }
             : (station ?? (focus ? (t < focus.start.unixMs ? focus.start : focus.end) : null))
         if (!tgt) return
@@ -290,28 +304,27 @@ export function SkyStage({
         const on = project(tv, cam, vp)
         const inView = on && on.x > 30 && on.x < w - 30 && on.y > 140 && on.y < h - 200
         const aligned = Math.abs(turn.turnDeg) < ALIGNED && Math.abs(turn.tiltDeg) < ALIGNED + 4
-        const name =
-          mode === 'camera' && target ? target.name : focus ? stationName(focus.noradId).short : ''
+        const name = aiming && target ? target.name : focus ? stationName(focus.noradId).short : ''
         let text: string
         let sub: string
-        if (mode === 'find' && station) {
+        if (mode === 'find' && !aiming && station) {
           text = inView ? 'There it is: follow the dot' : 'It’s up now: follow the arrow'
           sub = `${direction(station.azDeg)}, ${Math.round(station.elDeg)}° up`
-        } else if (mode === 'find' && focus && t > focus.end.unixMs) {
+        } else if (mode === 'find' && !aiming && focus && t > focus.end.unixMs) {
           text = `${name} has passed`
           sub = 'Pick another night from the list'
         } else {
           const lr = turn.turnDeg > 0 ? 'right' : 'left'
           const ud = turn.tiltDeg > 0 ? 'up' : 'down'
           text = aligned
-            ? mode === 'camera'
+            ? aiming
               ? `${name} is in the frame`
               : `This is the spot. ${name} appears here.`
             : Math.abs(turn.turnDeg) > ALIGNED
               ? `Turn ${lr} ${Math.round(Math.abs(turn.turnDeg))}°`
               : `Tilt ${ud} ${Math.round(Math.abs(turn.tiltDeg))}°`
           sub =
-            mode === 'camera' && target
+            aiming && target
               ? `${target.name} · ${direction(target.azDeg)}, ${Math.round(target.elDeg)}° up`
               : focus
                 ? `${direction(focus.start.azDeg)}, ${Math.round(focus.start.elDeg)}° up at ${formatTimeSeconds(focus.start.unixMs, place.timeZone)}`
@@ -351,6 +364,8 @@ export function SkyStage({
     mode,
     target,
     bottomInset,
+    aiming,
+    cameraOn,
   ])
 
   // Buzz when lined up (Android).
@@ -363,9 +378,12 @@ export function SkyStage({
     if (!guide.aligned) buzzed.current = false
   }, [guide.aligned])
 
-  // Sky Sync: twice a second, find bright objects in the camera image and correct the compass.
+  // Twice a second while the camera is on: Sky Sync (correct the compass from
+  // bright objects in the image) and Sky Check (is it clear, cloudy, bright,
+  // or blocked where you're pointing?).
+  const checkHistory = useRef<Condition[]>([])
   useEffect(() => {
-    if (mode !== 'camera' || camStatus !== 'on' || sensors.status !== 'active') return
+    if (!cameraOn || camStatus !== 'on') return
     const small = document.createElement('canvas')
     const id = setInterval(() => {
       const video = camVideoRef.current
@@ -380,30 +398,62 @@ export function SkyStage({
       if (!sctx) return
       sctx.drawImage(video, 0, 0, sw, sh)
       const img = sctx.getImageData(0, 0, sw, sh)
-      // object-fit: cover mapping from video pixels to screen pixels.
+      // object-fit: cover mapping between video pixels and screen pixels.
       const W = wrap.clientWidth
       const H = wrap.clientHeight
       const scale = Math.max(W / video.videoWidth, H / video.videoHeight)
       const ox = (W - video.videoWidth * scale) / 2
       const oy = (H - video.videoHeight * scale) / 2
       const k = video.videoWidth / sw
-      const match = measureSync(
-        img.data,
-        sw,
-        sh,
-        (x, y) => ({ x: ox + x * k * scale, y: oy + y * k * scale }),
-        view.cam,
-        view.vp,
-        sceneAt(Date.now()),
-        catalog,
-      )
-      if (match && Math.abs(match.yawErrorDeg) < 25) {
-        sensors.nudgeYaw(match.yawErrorDeg * 0.5)
-        if (Math.abs(match.yawErrorDeg) < 2.5) setSync({ name: match.name, at: Date.now() })
+      const toScreen = (x: number, y: number) => ({ x: ox + x * k * scale, y: oy + y * k * scale })
+      const toSample = (x: number, y: number) => ({
+        x: (x - ox) / scale / k,
+        y: (y - oy) / scale / k,
+      })
+      const scene = sceneAt(Date.now())
+
+      if (sensors.status === 'active') {
+        const match = measureSync(img.data, sw, sh, toScreen, view.cam, view.vp, scene, catalog)
+        if (match && Math.abs(match.yawErrorDeg) < 25) {
+          sensors.nudgeYaw(match.yawErrorDeg * 0.5)
+          if (Math.abs(match.yawErrorDeg) < 2.5) setSync({ name: match.name, at: Date.now() })
+        }
       }
+
+      // What the sky model says should be visible in this frame.
+      const expected: Expected[] = []
+      const add = (name: string, az: number, el: number, magnitude: number) => {
+        if (el < 3) return
+        const p = project(enu(az, el), view.cam, view.vp)
+        if (!p) return
+        const q = toSample(p.x, p.y)
+        if (q.x > 4 && q.y > 4 && q.x < sw - 4 && q.y < sh - 4)
+          expected.push({ name, x: q.x, y: q.y, magnitude })
+      }
+      if (scene.moon.illumination > 0.1) add('the Moon', scene.moon.azDeg, scene.moon.elDeg, -10)
+      for (const pl of scene.planets)
+        add(pl.id.charAt(0).toUpperCase() + pl.id.slice(1), pl.azDeg, pl.elDeg, pl.magnitude)
+      if (catalog) {
+        for (const [name, i] of Object.entries(catalog.named)) {
+          const mag = catalog.stars[i]?.[2] ?? 99
+          if (mag < 0.5) add(name, scene.stars.az[i] ?? 0, scene.stars.el[i] ?? -90, mag)
+        }
+      }
+      const verdict = judge(
+        frameStats(img.data, sw, sh),
+        expected,
+        scene.sun.elDeg,
+        azEl(view.cam.forward).elDeg,
+      )
+      checkHistory.current = [...checkHistory.current.slice(-5), verdict.condition]
+      setCheck({ ...verdict, settled: settle(checkHistory.current) })
     }, 500)
-    return () => clearInterval(id)
-  }, [mode, camStatus, camVideoRef, sensors, sceneAt, catalog])
+    return () => {
+      clearInterval(id)
+      checkHistory.current = []
+      setCheck(null)
+    }
+  }, [cameraOn, camStatus, camVideoRef, sensors, sceneAt, catalog])
   const synced = sync && clock - sync.at < 4000
 
   // ── Capture ─────────────────────────────────────────────────────────────
@@ -591,7 +641,7 @@ export function SkyStage({
           live && setVfovLive((f) => Math.max(25, Math.min(100, f + e.deltaY * 0.05)))
         }
       >
-        {mode === 'camera' && (
+        {cameraOn && (
           <video
             ref={camVideoRef}
             playsInline
@@ -650,9 +700,7 @@ export function SkyStage({
           <HeadingTape
             headingDeg={hud.heading}
             elDeg={hud.el}
-            targetAzDeg={
-              mode === 'camera' && target ? target.azDeg : focus ? focus.start.azDeg : null
-            }
+            targetAzDeg={aiming && target ? target.azDeg : focus ? focus.start.azDeg : null}
           />
         </div>
         {live && (
@@ -665,7 +713,15 @@ export function SkyStage({
             </p>
             <p className="mt-1.5 text-[0.8125rem] text-white/75">{guide.sub}</p>
             <div className="mt-2 flex flex-wrap justify-center gap-2">
-              {mode === 'camera' && synced && sync && (
+              {check && (
+                <SkyCheckChip
+                  check={check}
+                  target={
+                    aiming && target ? target.name : focus ? stationName(focus.noradId).short : null
+                  }
+                />
+              )}
+              {cameraOn && synced && sync && (
                 <span className="display rounded-full bg-action/90 px-3 py-1 text-[0.75rem] text-action-ink">
                   Synced to {sync.name}
                 </span>
@@ -850,35 +906,171 @@ export function SkyStage({
           </>
         )}
 
-        {mode === 'find' && focus && (
-          <div className="glass flex w-full max-w-md items-center justify-between gap-3 rounded-xl px-4 py-3">
-            <p className="hud text-[15px] text-white/85">
-              {simMs === null ? 'Live' : 'Preview'} ·{' '}
-              {formatTimeSeconds(simMs ?? clock, place.timeZone)}
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                if (simMs !== null) return setSimMs(null)
-                const from = focus.start.unixMs - 20_000
-                const t0 = performance.now()
-                const id = setInterval(() => {
-                  const t = from + (performance.now() - t0) * 8
-                  if (t > focus.end.unixMs + 15_000) {
-                    clearInterval(id)
-                    setSimMs(null)
-                  } else setSimMs(t)
-                }, 33)
-              }}
-              className="hud-caps rounded-md bg-station px-3 py-2 text-black"
-            >
-              {simMs === null ? 'Preview the pass' : 'Back to live'}
-            </button>
-          </div>
+        {mode === 'find' && (
+          <>
+            {/* What to find: tonight's pass, or anything bright that's up */}
+            <div className="flex w-full max-w-xl gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+              {focus && (
+                <button
+                  type="button"
+                  aria-pressed={!pickedTarget}
+                  onClick={() => setTarget(null)}
+                  className={`shrink-0 rounded-2xl px-3.5 py-2 text-left ring-1 backdrop-blur-md ${!pickedTarget ? 'bg-action text-action-ink ring-action' : 'bg-black/45 text-white ring-white/15'}`}
+                >
+                  <span className="display block text-[0.9375rem]">
+                    {stationName(focus.noradId).short}
+                  </span>
+                  <span
+                    className={`block text-[0.6875rem] ${!pickedTarget ? 'text-action-ink/75' : 'text-white/60'}`}
+                  >
+                    {formatTime(focus.start.unixMs, place.timeZone)}
+                  </span>
+                </button>
+              )}
+              {targets
+                .filter((t) => t.kind !== 'trail')
+                .map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    aria-pressed={pickedTarget?.id === t.id}
+                    onClick={() => setTarget(t)}
+                    className={`shrink-0 rounded-2xl px-3.5 py-2 text-left ring-1 backdrop-blur-md ${pickedTarget?.id === t.id ? 'bg-action text-action-ink ring-action' : 'bg-black/45 text-white ring-white/15'}`}
+                  >
+                    <span className="display block text-[0.9375rem]">{t.name}</span>
+                    <span
+                      className={`block text-[0.6875rem] ${pickedTarget?.id === t.id ? 'text-action-ink/75' : 'text-white/60'}`}
+                    >
+                      {t.detail}
+                    </span>
+                  </button>
+                ))}
+            </div>
+            <div className="flex w-full max-w-md items-center gap-2">
+              <button
+                type="button"
+                aria-pressed={arOn}
+                onClick={() => setArOn((v) => !v)}
+                className={`display flex items-center gap-2 rounded-2xl px-4 py-3 text-[0.875rem] ring-1 backdrop-blur-md ${arOn ? 'bg-action text-action-ink ring-action' : 'bg-black/50 text-white ring-white/15'}`}
+              >
+                <IconCamera className="size-4.5" /> {arOn ? 'AR on' : 'AR camera'}
+              </button>
+              {focus && !pickedTarget && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (simMs !== null) return setSimMs(null)
+                    const from = focus.start.unixMs - 20_000
+                    const t0 = performance.now()
+                    const id = setInterval(() => {
+                      const t = from + (performance.now() - t0) * 8
+                      if (t > focus.end.unixMs + 15_000) {
+                        clearInterval(id)
+                        setSimMs(null)
+                      } else setSimMs(t)
+                    }, 33)
+                  }}
+                  className="display flex-1 rounded-2xl bg-black/50 px-4 py-3 text-[0.875rem] text-white ring-1 ring-white/15 backdrop-blur-md"
+                >
+                  {simMs === null
+                    ? 'Preview the pass'
+                    : `Preview · ${formatTimeSeconds(simMs, place.timeZone)}`}
+                </button>
+              )}
+            </div>
+            {arOn && camStatus === 'blocked' && (
+              <p className="text-sm text-white/80">
+                Camera unavailable here. The drawn sky still shows where everything is.
+              </p>
+            )}
+          </>
         )}
       </div>
 
       {result && <CaptureResult capture={result} onClose={() => setResult(null)} />}
     </div>
+  )
+}
+
+const CHECK_STYLE: Record<Condition, { label: string; cls: string }> = {
+  clear: { label: 'Clear sky here', cls: 'bg-action text-action-ink' },
+  partly: { label: 'Partly cloudy here', cls: 'bg-white/85 text-black' },
+  cloudy: { label: 'Clouds here', cls: 'bg-white/85 text-black' },
+  bright: { label: 'Too bright to see', cls: 'bg-white/85 text-black' },
+  blocked: { label: 'Something in the way', cls: 'bg-white/85 text-black' },
+  unknown: { label: 'Checking the sky…', cls: 'bg-black/45 text-white/80' },
+}
+
+/**
+ * Sky Check result: says what the camera sees, and, crucially, tells you when
+ * the thing you're looking for is there but hidden, so a cloudy night doesn't
+ * look like a broken app.
+ */
+function SkyCheckChip({
+  check,
+  target,
+}: {
+  check: Verdict & { settled: Condition }
+  target: string | null
+}) {
+  const c = check.settled
+  const style = CHECK_STYLE[c]
+  const hidden = target && check.seen[target] === false
+  const detail =
+    hidden && c === 'cloudy'
+      ? `${target} is there, behind the clouds. The app isn’t wrong; try again when it clears.`
+      : hidden && c === 'blocked'
+        ? `${target} is behind something here. Try a spot with an open view.`
+        : c === 'bright'
+          ? 'Everything is still where the app shows it. It’ll appear as the sky darkens.'
+          : check.reason
+  return (
+    <div className="flex max-w-xs flex-col items-center gap-1">
+      <span
+        className={`display flex items-center gap-1.5 rounded-full px-3 py-1 text-[0.75rem] ${style.cls}`}
+      >
+        <CloudGlyph condition={c} />
+        {style.label}
+      </span>
+      <span className="text-center text-[0.75rem] leading-snug text-white/80">{detail}</span>
+    </div>
+  )
+}
+
+function CloudGlyph({ condition }: { condition: Condition }) {
+  const p = {
+    width: 14,
+    height: 14,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    'aria-hidden': true,
+  }
+  if (condition === 'clear')
+    return (
+      <svg {...p}>
+        <path d="m5 12.5 4.5 4.5L19 7.5" />
+      </svg>
+    )
+  if (condition === 'bright')
+    return (
+      <svg {...p}>
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+      </svg>
+    )
+  if (condition === 'blocked')
+    return (
+      <svg {...p}>
+        <path d="M12 3 6 13h4l-3 6h10l-3-6h4L12 3ZM12 19v2" />
+      </svg>
+    )
+  return (
+    <svg {...p}>
+      <path d="M7 18a4.5 4.5 0 0 1-.7-8.95A6 6 0 0 1 18 9.5a4 4 0 0 1-.5 8.5H7Z" />
+    </svg>
   )
 }

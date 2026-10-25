@@ -177,3 +177,12 @@ Node 22.18+ strips TypeScript types natively. Labs (`scripts/labs/*.ts`) import 
   - The ground uses the exact horizon line of the rectilinear camera; the old polygon left grey wedges.
   - The camera is eased every frame (time-based smoothing) at a capped 1.5× pixel ratio for smooth motion on phones.
   - A "Point with your phone" button re-asks for motion access if the first request didn't take.
+
+## D-028 AR in the Sky tab, and Sky Check instead of a cloud neural network (2026-10-25)
+- **Context:** people point at Venus, see nothing because of clouds, and blame the app.
+- **Choice:**
+  - The Sky tab gets an AR camera switch and a target picker.
+  - While the camera runs, **Sky Check** compares the objects the sky model predicts in the frame with the point sources actually detected, the method observatory cloud cameras use. It reports Clear / Partly cloudy / Clouds / Too bright / Something in the way, with a reason.
+  - Most importantly, it says when the chosen target is there but hidden.
+- **Why not ML:** size, opacity and speed. This is explainable, offline and private (frames never leave the phone).
+- **Learn:** `docs/learn/13-sky-check.md`.
