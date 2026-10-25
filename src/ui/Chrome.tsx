@@ -26,9 +26,10 @@ export function Footer() {
         Chinese, share cards and two-week calendars arrive in v0.1.
       </p>
       <p className="mt-3 max-w-prose">
-        Computed on your device by our open-source engine from CelesTrak orbital data. No ads, no
-        accounts, no cookies, nothing about you leaves your phone. Predictions are estimates for
-        sky-watching, not for safety-critical use.
+        Computed on your device by our open-source engine from CelesTrak orbital data. Stars: Yale
+        Bright Star Catalogue. Compass correction: NOAA World Magnetic Model. No ads, no accounts,
+        no cookies, nothing about you leaves your phone. Predictions are estimates for sky-watching,
+        not for safety-critical use.
       </p>
       <p className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
         <a

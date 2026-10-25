@@ -1,142 +1,169 @@
-// The top of the screen: one big time, one sentence, and how to find it.
-// The 3-second rule lives here. Docs: docs/DESIGN.md#answer
+// The answer, in two parts: the headline that sits on the sky picture (time,
+// station, countdown) and the details under it (path in words, how to find
+// it, what's near it, actions). The 3-second rule lives here.
+// Docs: docs/DESIGN.md#answer
 import type { ForecastPass, NightSky } from '../engine/index.ts'
 import { passPeriod } from '../engine/sky/schedule.ts'
+import type { Landmark } from '../engine/sky/scene.ts'
 import {
   brightnessSentence,
+  direction,
   endNote,
+  fistsLabel,
+  minutesLabel,
   pathSentence,
   startCue,
   stationName,
-  minutesLabel,
-  direction,
-  fistsLabel,
 } from '../copy/en.ts'
 import { countdown, dayLabel, formatDate, timeParts } from '../lib/format.ts'
 import type { HomeState } from '../lib/state.ts'
 import { CalendarButton } from './CalendarButton.tsx'
 
-type Props = {
-  state: HomeState<ForecastPass>
-  /** A pass picked from the board overrides the automatic answer. */
-  focus: ForecastPass | null
-  onClearFocus: () => void
-  nights: readonly NightSky[]
-  placeName: string
-  timeZone: string
-  nowMs: number
-  nightMode: boolean
-  onNightMode: (on: boolean) => void
+/** Which pass the screen is about, and how to introduce it. */
+export type AnswerModel = {
+  kind: HomeState['kind'] | 'focus'
+  pass: ForecastPass | null
+  eyebrow: string
+  /** Shown instead of a time when there's nothing tonight. */
+  headline?: string
+  sub?: string
 }
 
-export function Answer(props: Props) {
-  const { state, focus, timeZone, nowMs } = props
-  if (focus)
-    return (
-      <PassAnswer {...props} pass={focus} eyebrow={eyebrowFor(focus, nowMs, timeZone)} focused />
-    )
-
+export function answerModel(
+  state: HomeState<ForecastPass>,
+  focus: ForecastPass | null,
+  placeName: string,
+  nowMs: number,
+  tz: string,
+): AnswerModel {
+  if (focus) {
+    const day = dayLabel(focus.start.unixMs, nowMs, tz)
+    return {
+      kind: 'focus',
+      pass: focus,
+      eyebrow:
+        day === 'Today'
+          ? `Tonight in ${placeName}`
+          : `${day}, ${formatDate(focus.start.unixMs, tz).split(', ')[1]}`,
+    }
+  }
   switch (state.kind) {
     case 'look-now':
-      return <LookNow {...props} pass={state.pass} />
+      return { kind: state.kind, pass: state.pass, eyebrow: 'It’s up right now' }
     case 'get-ready':
-      return (
-        <PassAnswer
-          {...props}
-          pass={state.pass}
-          eyebrow={`Get ready · ${countdown(state.pass.start.unixMs - nowMs)}`}
-          urgent
-        />
-      )
+      return {
+        kind: state.kind,
+        pass: state.pass,
+        eyebrow: `Get ready · ${countdown(state.pass.start.unixMs - nowMs)}`,
+      }
     case 'tonight':
-      return <PassAnswer {...props} pass={state.pass} eyebrow={`Tonight in ${props.placeName}`} />
+      return { kind: state.kind, pass: state.pass, eyebrow: `Tonight in ${placeName}` }
     case 'just-ended':
-      return (
-        <NoPass
-          {...props}
-          headline={`${stationName(state.pass.noradId).short} just went by.`}
-          sub="Did you catch it? If not, here’s the next one."
-          next={state.next}
-        />
-      )
+      return {
+        kind: state.kind,
+        pass: state.next,
+        eyebrow: state.next
+          ? `Next: ${dayLabel(state.next.start.unixMs, nowMs, tz)}`
+          : 'Nothing more this week',
+        headline: `${stationName(state.pass.noradId).short} just went by.`,
+        sub: 'Did you catch it? Here’s the next one.',
+      }
     case 'not-tonight':
-      return (
-        <NoPass
-          {...props}
-          headline="No space station passes tonight."
-          sub="The stations aren’t always lit up when your sky is dark. They come in runs of a week or two."
-          next={state.next}
-        />
-      )
+      return {
+        kind: state.kind,
+        pass: state.next,
+        eyebrow: state.next
+          ? `Next good look: ${dayLabel(state.next.start.unixMs, nowMs, tz)}`
+          : 'Nothing this week',
+        headline: 'No space station passes tonight.',
+        sub: 'The stations come in runs of a week or two. Here’s the next one.',
+      }
   }
 }
 
-function eyebrowFor(p: ForecastPass, nowMs: number, tz: string) {
-  const day = dayLabel(p.start.unixMs, nowMs, tz)
-  return day === 'Today' ? 'Tonight' : `${day}, ${formatDate(p.start.unixMs, tz).split(', ')[1]}`
+/** Overlaid on the sky picture. */
+export function Headline({
+  model,
+  timeZone,
+  nowMs,
+}: {
+  model: AnswerModel
+  timeZone: string
+  nowMs: number
+}) {
+  const p = model.pass
+  const until = p ? p.start.unixMs - nowMs : 0
+  return (
+    <div>
+      {model.headline && (
+        <p className="mb-3 text-lg font-semibold text-balance">{model.headline}</p>
+      )}
+      <div className="flex items-baseline justify-between gap-4">
+        <h1 id="answer" className="text-base font-medium text-white/80">
+          {model.eyebrow}
+        </h1>
+        {p && until > 0 && model.kind !== 'get-ready' && (
+          <span className="tnum text-sm text-white/75">{countdown(until)}</span>
+        )}
+      </div>
+      {p && model.kind === 'look-now' ? (
+        <p className="mt-1 text-[clamp(2.4rem,11vw,4rem)] leading-[1.02] font-semibold tracking-[-0.03em]">
+          Look {direction(liveAz(p, nowMs).azDeg)},{' '}
+          <span className="whitespace-nowrap">{fistsLabel(liveAz(p, nowMs).elDeg)} up.</span>
+        </p>
+      ) : (
+        p && <BigTime ms={p.start.unixMs} timeZone={timeZone} />
+      )}
+      {p && (
+        <p className="mt-2 text-lg">
+          <span
+            aria-hidden="true"
+            className="mr-2 inline-block size-2.5 rounded-full bg-station align-[0.1em]"
+          />
+          <span className="font-semibold">{capitalise(stationName(p.noradId).long)}</span>
+        </p>
+      )}
+    </div>
+  )
 }
 
-function sunsetFor(p: ForecastPass, nights: readonly NightSky[], tz: string) {
-  const isEvening = passPeriod(p, tz) !== 'before-dawn'
+/** Under the picture: the path in words, how to find it, actions. */
+export function Details(props: {
+  model: AnswerModel
+  nights: readonly NightSky[]
+  landmark: Landmark | null
+  placeName: string
+  timeZone: string
+  onFindIt: () => void
+  onClearFocus: () => void
+  nightMode: boolean
+  onNightMode: (on: boolean) => void
+}) {
+  const { model, nights, landmark, placeName, timeZone } = props
+  const p = model.pass
+  if (!p) return <p className="text-lg text-ink-2">{model.sub ?? 'Check back soon.'}</p>
+  const isEvening = passPeriod(p, timeZone) !== 'before-dawn'
   const night = nights.find(
     (n) =>
       n.evening.sunsetMs !== null && Math.abs(p.start.unixMs - n.evening.sunsetMs) < 10 * 3_600_000,
   )
-  return { isEvening, sunsetAzDeg: night?.evening.sunsetAzDeg ?? null }
-}
-
-function BigTime({ ms, timeZone }: { ms: number; timeZone: string }) {
-  const { clock, period } = timeParts(ms, timeZone)
-  return (
-    <p className="tnum mt-1 text-[clamp(4rem,19vw,6.5rem)] leading-[0.95] font-semibold tracking-[-0.035em]">
-      {clock}
-      <span className="ml-2 text-[0.36em] font-medium tracking-normal text-ink-2">{period}</span>
-    </p>
-  )
-}
-
-function PassAnswer(
-  props: Props & { pass: ForecastPass; eyebrow: string; urgent?: boolean; focused?: boolean },
-) {
-  const { pass, eyebrow, urgent, focused, timeZone, nowMs, nights, onClearFocus, placeName } = props
-  const name = stationName(pass.noradId)
-  const { isEvening, sunsetAzDeg } = sunsetFor(pass, nights, timeZone)
-  const note = endNote(pass)
-  const until = pass.start.unixMs - nowMs
+  const note = endNote(p)
+  const urgent = model.kind === 'get-ready' || model.kind === 'look-now'
 
   return (
-    <section aria-labelledby="answer" aria-live="polite">
-      <div className="flex items-baseline justify-between gap-4">
-        <h1 id="answer" className={`text-base font-medium ${urgent ? 'text-ink' : 'text-ink-2'}`}>
-          {eyebrow}
-        </h1>
-        {focused ? (
-          <button
-            type="button"
-            onClick={onClearFocus}
-            className="text-sm text-ink-2 underline decoration-hair-strong underline-offset-4 hover:text-ink"
-          >
-            Back to tonight
-          </button>
-        ) : (
-          until > 0 && <span className="tnum text-sm text-ink-2">{countdown(until)}</span>
-        )}
-      </div>
-      <BigTime ms={pass.start.unixMs} timeZone={timeZone} />
-      <p className="mt-3 text-lg">
-        <span
-          aria-hidden="true"
-          className="mr-2 inline-block size-2.5 rounded-full bg-station align-[0.1em]"
-        />
-        <span className="font-semibold">{name.long[0]?.toUpperCase() + name.long.slice(1)}</span>
-      </p>
-      <p className="mt-2 max-w-[36ch] text-xl leading-snug text-pretty">{pathSentence(pass)}</p>
-
-      <ul className="mt-6 space-y-2.5 text-[1.0625rem] text-ink-2">
-        <Cue>{startCue(pass, sunsetAzDeg, isEvening)}</Cue>
+    <section aria-label="How to see it">
+      {model.sub && <p className="mb-4 text-ink-2">{model.sub}</p>}
+      <p className="max-w-[38ch] text-xl leading-snug text-pretty">{pathSentence(p)}</p>
+      <ul className="mt-5 space-y-2.5 text-[1.0625rem] text-ink-2">
+        <Cue>{startCue(p, night?.evening.sunsetAzDeg ?? null, isEvening)}</Cue>
+        {landmark && <Cue>{landmarkSentence(landmark)}</Cue>}
         <Cue>
-          {brightnessSentence(pass.brightestMagnitude)} Visible for about{' '}
-          {minutesLabel(pass.end.unixMs - pass.start.unixMs)}.
+          {brightnessSentence(p.brightestMagnitude)} Visible for about{' '}
+          {minutesLabel(p.end.unixMs - p.start.unixMs)}.
+        </Cue>
+        <Cue>
+          It looks like a steady star sliding across the sky. No blinking lights: that’s how you
+          tell it from a plane.
         </Cue>
         {note && <Cue>{note}</Cue>}
         {urgent && (
@@ -144,84 +171,67 @@ function PassAnswer(
         )}
       </ul>
 
-      <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
-        <CalendarButton pass={pass} placeName={placeName} timeZone={timeZone} />
-        {urgent && (
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={props.onFindIt}
+          className="rounded-md bg-ink px-5 py-3 text-[0.9375rem] font-semibold text-night transition-opacity hover:opacity-90"
+        >
+          Find it in the sky
+        </button>
+        <CalendarButton pass={p} placeName={placeName} timeZone={timeZone} />
+      </div>
+      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+        {model.kind === 'focus' && (
           <button
             type="button"
-            onClick={() => props.onNightMode(!props.nightMode)}
-            className="text-sm text-ink-2 underline decoration-hair-strong underline-offset-4 hover:text-ink"
+            onClick={props.onClearFocus}
+            className="text-ink-2 underline decoration-hair-strong underline-offset-4 hover:text-ink"
           >
-            {props.nightMode ? 'Normal colors' : 'Switch to red night light'}
+            Back to tonight
           </button>
         )}
+        <button
+          type="button"
+          onClick={() => props.onNightMode(!props.nightMode)}
+          className="text-ink-2 underline decoration-hair-strong underline-offset-4 hover:text-ink"
+        >
+          {props.nightMode ? 'Normal colors' : 'Red night light'}
+        </button>
       </div>
     </section>
   )
 }
 
-function LookNow(props: Props & { pass: ForecastPass }) {
-  const { pass, nowMs } = props
-  const name = stationName(pass.noradId)
-  // Where is it right now? Nearest track point.
-  const here = pass.track.reduce((a, p) =>
-    Math.abs(p.unixMs - nowMs) < Math.abs(a.unixMs - nowMs) ? p : a,
-  )
-  const left = pass.end.unixMs - nowMs
+function landmarkSentence(l: Landmark): string {
+  const close = l.separationDeg < 2.5
+  const where = close
+    ? 'right past'
+    : `about ${l.separationDeg < 6 ? 'half a fist' : 'one fist'} from`
+  const what =
+    l.kind === 'star'
+      ? `${l.name}, one of the brightest stars`
+      : l.kind === 'planet'
+        ? `the planet ${l.name}`
+        : 'the Moon'
+  return `It passes ${where} ${what}. A good landmark to watch for.`
+}
+
+function BigTime({ ms, timeZone }: { ms: number; timeZone: string }) {
+  const { clock, period } = timeParts(ms, timeZone)
   return (
-    <section aria-labelledby="answer" aria-live="polite">
-      <h1 id="answer" className="text-base font-semibold text-station">
-        It’s up right now
-      </h1>
-      <p className="mt-2 text-[clamp(2.5rem,11vw,4rem)] leading-[1.02] font-semibold tracking-[-0.03em]">
-        Look {direction(here.azDeg)},{' '}
-        <span className="whitespace-nowrap">{fistsLabel(here.elDeg)} up.</span>
-      </p>
-      <p className="mt-3 text-xl text-ink-2">
-        {name.short}: a steady light gliding across the sky, no blinking. About {minutesLabel(left)}{' '}
-        left.
-      </p>
-      <button
-        type="button"
-        onClick={() => props.onNightMode(!props.nightMode)}
-        className="mt-5 text-sm text-ink-2 underline decoration-hair-strong underline-offset-4 hover:text-ink"
-      >
-        {props.nightMode ? 'Normal colors' : 'Switch to red night light'}
-      </button>
-    </section>
+    <p className="tnum mt-1 text-[clamp(4.25rem,21vw,7rem)] leading-[0.92] font-semibold tracking-[-0.04em]">
+      {clock}
+      <span className="ml-2 text-[0.34em] font-medium tracking-normal text-white/75">{period}</span>
+    </p>
   )
 }
 
-function NoPass(props: Props & { headline: string; sub: string; next: ForecastPass | null }) {
-  const { headline, sub, next, timeZone, nowMs } = props
-  return (
-    <section aria-labelledby="answer" aria-live="polite">
-      <h1
-        id="answer"
-        className="text-[clamp(2rem,8vw,3rem)] leading-tight font-semibold tracking-[-0.02em] text-balance"
-      >
-        {headline}
-      </h1>
-      <p className="mt-3 max-w-[40ch] text-lg text-ink-2">{sub}</p>
-      {next && (
-        <div className="mt-8">
-          <p className="text-base text-ink-2">
-            Next good look: {dayLabel(next.start.unixMs, nowMs, timeZone)}
-          </p>
-          <BigTime ms={next.start.unixMs} timeZone={timeZone} />
-          <p className="mt-3 max-w-[36ch] text-lg text-pretty">
-            <span
-              aria-hidden="true"
-              className="mr-2 inline-block size-2.5 rounded-full bg-station align-[0.1em]"
-            />
-            <span className="font-semibold">{stationName(next.noradId).short}.</span>{' '}
-            {pathSentence(next)}
-          </p>
-        </div>
-      )}
-    </section>
-  )
+function liveAz(p: ForecastPass, nowMs: number) {
+  return p.track.reduce((a, q) => (Math.abs(q.unixMs - nowMs) < Math.abs(a.unixMs - nowMs) ? q : a))
 }
+
+const capitalise = (s: string) => s[0]?.toUpperCase() + s.slice(1)
 
 function Cue({ children }: { children: React.ReactNode }) {
   return (
