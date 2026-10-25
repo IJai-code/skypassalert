@@ -58,6 +58,7 @@ These are recognizable tells of generated, templated UIs; several were in our ow
   - **just-ended:** "Did you catch it?", next one.
   - **not-tonight:** an honest explanation, plus the next good look.
   - **Loading:** the same shapes, so there's no layout shift (Lighthouse CLS 0) and the page is never blank.
+- **Which way to look** (`CompassCard.tsx`): the sky map doubles as a compass dial, with a degree ring. With "live compass" on, it turns with the phone and says "turn left 35°". Bearings are true north, with the magnetic equivalent alongside.
 - **Sky map** (`SkyDome.tsx`). Polar plot: edge = horizon, centre = straight up, **north up and east right** (map convention; star charts put east on the left, which confuses non-astronomers). It shows:
   - Altitude rings at 30° and 60°.
   - Where the sun set, and the Moon if it's up at the peak.
@@ -83,7 +84,7 @@ The build target is Vite's `baseline-widely-available`: Chrome/Edge 111+, Firefo
 
 We test the unsupported path by adding `class="legacy"` to `<html>` (the browser preview does this in review).
 
-## 7. Camera / AR: decision
+## 7. Camera / AR: decision (revised 2026-10-24)
 **No camera view as the core experience.** The reasons, in order:
 - **Eyes beat cameras here.** The ISS and Tiangong are among the brightest things in the sky. A live phone-camera preview at night is mostly black.
 - **Bright screens ruin night vision** (see night mode above).
@@ -92,9 +93,19 @@ We test the unsupported path by adding `class="legacy"` to `<html>` (the browser
   - iOS needs separate permission taps for motion and camera.
   - Camera access is reported broken in iOS in-app browsers (WebKit bug 183201), where our audience opens links. To be verified on a real device.
 
-**Instead:**
-- Phase 2: the "look now" state, with direction plus fists, live position on the map, and red light.
-- Phase 6: a **Sky Pointer**. Hold the phone up and an arrow guides you, with the camera as an optional backdrop only where supported.
+**Revised at Ishaan's direction, shipped now as Sky View.** The objections became design requirements:
+- The **drawn sky is the default**, with the camera as an optional backdrop, so it works in the dark.
+- **Magnetic declination** is corrected with NOAA WMM2025.
+- **One-tap calibration** against the Moon or a bright planet removes compass drift.
+- **Drag-to-look** works wherever sensors or the camera are blocked.
+- **Red light** protects night vision.
+- A **guidance arrow** with "turn right 40°" text, plus a buzz on Android when you're aligned.
+- **Preview the pass:** watch it happen from your spot before it happens.
+
+Learn: `docs/learn/11-compass.md`.
+
+## 7b. Hero picture (postcard)
+The top of the page is a picture of what you'll see, facing where the pass begins: the real twilight colour at that minute, the real stars and planets, and the path with minute marks. The horizon sits at ~60% height so the answer reads on the "ground". It replaced a text-first header because the strongest argument for this app is showing *your* sky, not describing it.
 
 ## 8. Voice
 - Write like a friend standing next to you outside. Short sentences. Specific.

@@ -1,6 +1,6 @@
 # Status
 
-_Last updated: 2026-10-24, Phase 2 merged (PR #2) and live at https://skypassalert.com._
+_Last updated: 2026-10-24, Sky View release (Phase 2.5) live at https://skypassalert.com._
 
 ## Done
 ### Phase 1: Foundation (merged)
@@ -39,6 +39,20 @@ Public repo, CI, the Pages deploy at https://skypassalert.com (HTTPS enforced, w
 - **Learning:** chapters 01–07, 09, 10 with worked examples from tonight's pass. Labs: `lab:sidereal`, `lab:shadow`, `lab:pass`, `lab:seasons`.
 - **Research answers:** why use this instead of a search, the camera/AR decision, device tiers. See `docs/DESIGN.md` §1, §6, §7 and `docs/MARKET.md`.
 
+### Phase 2.5: Sky View, live compass, sky picture (2026-10-24)
+- **Hero:** a picture of tonight's pass as you'll see it, with real twilight, stars, planets and the path with minute marks.
+- **Sky View** ("Find it in the sky"):
+  - Point the phone at the sky. An arrow guides you to where the station appears.
+  - Optional camera backdrop, preview of the pass, time scrubber, red light.
+  - Drag-to-look on laptops.
+- **Compass:**
+  - True north via NOAA WMM2025 (all 100 official test points pass).
+  - Moon/planet calibration.
+  - The sky map turns into a live compass dial with true and magnetic bearings.
+- **Landmark cue:** "It passes right past Vega" (Yale Bright Star Catalogue).
+- **Numbers:** 209 tests; initial JS 95 KB (budget 150); Lighthouse 100 ×4.
+- **Needs real devices:** iPhone (heading offset, permission prompt), Android, and landscape mode. See `docs/learn/11-compass.md`.
+
 ## Next: Phase 3 (MVP v0.1)
 - Place picker: Bay Area presets, geolocation (on-device), GeoNames city search with GeoNames attribution in the footer.
 - Family mode settings (bedtime, kid wording); zh-Hans catalog for all copy.
@@ -51,7 +65,7 @@ Public repo, CI, the Pages deploy at https://skypassalert.com (HTTPS enforced, w
 |---|---|
 | **Ishaan** | **Tonight (Sat 2026-10-24), Fremont:** step outside at **7:32 PM**, face where the sun went down, look one fist to the left. Tiangong climbs almost straight overhead (80°) and fades out high in the east-northeast at 7:36:56. Note what you see in `FIELD_LOG.md`. |
 | Ishaan | Read through the merged PR's "Read this first" list. Run `npm run lab:seasons` (write your prediction first). |
-| Ishaan | Device check on the live site: iPhone Safari, an Android phone, and inside WeChat (send https://skypassalert.com to yourself). Note anything that looks off. |
+| Ishaan | **Outdoors with a phone:** tap "Find it in the sky", allow motion, and check that the drawn stars and Moon line up with the real ones. Try "Fix compass" with the Moon. On iPhone, Android, and inside WeChat. Note anything off. |
 | Parent | (From Phase 1, if not done) Porkbun email forwarding for `hello@skypassalert.com`. |
 | Ishaan (optional) | If you add a `main` ruleset requiring PRs, add **GitHub Actions** to its bypass list, or the Data workflow's commits will be rejected. |
 

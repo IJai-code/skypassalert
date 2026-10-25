@@ -53,7 +53,15 @@ export function basisLookingAt(azDeg: number, elDeg: number, rollDeg = 0): Camer
   return { right, up, forward }
 }
 
-export type Viewport = { width: number; height: number; vfovDeg: number; projection: Projection }
+export type Viewport = {
+  width: number
+  height: number
+  vfovDeg: number
+  projection: Projection
+  /** Where the view's centre lands on screen (default: the middle). */
+  cx?: number
+  cy?: number
+}
 
 /**
  * Project a sky direction into the viewport. Returns null when it is behind

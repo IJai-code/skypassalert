@@ -23,7 +23,11 @@ type Props = {
   children?: React.ReactNode
 }
 
-/** Where to point the picture: towards the first part of the path, horizon near the bottom. */
+/** Share of the picture's height above the horizon; the answer sits on the "ground" below. */
+const HORIZON_AT = 0.6
+const CENTRE_AT = 0.36
+
+/** Where to point the picture: towards the first part of the path. */
 export function postcardView(pass: ForecastPass) {
   const n = pass.track.length
   const lead = pass.track.slice(0, Math.max(2, Math.ceil(n * 0.55)))
@@ -34,7 +38,17 @@ export function postcardView(pass: ForecastPass) {
     y += Math.cos((p.azDeg * Math.PI) / 180)
   }
   const az = ((Math.atan2(x, y) * 180) / Math.PI + 360) % 360
-  return { az, el: Math.max(22, Math.min(38, pass.peak.elDeg * 0.45)) }
+  return { az }
+}
+
+/**
+ * Camera elevation that puts the horizon at HORIZON_AT of the height when the
+ * view's centre is drawn at CENTRE_AT (stereographic: y = 2k·tan(θ/2)).
+ */
+function elevationForHorizon(vfovDeg: number): number {
+  const q = (HORIZON_AT - CENTRE_AT) * 2 // offset as a fraction of height/2
+  const t = q * Math.tan((vfovDeg * Math.PI) / 720) // tan(θ/2) = q·tan(vfov/4)
+  return (2 * Math.atan(t) * 180) / Math.PI
 }
 
 export function Postcard({ pass, place, catalog, red, nowMs, className, children }: Props) {
@@ -57,13 +71,14 @@ export function Postcard({ pass, place, catalog, red, nowMs, className, children
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       const view = postcardView(pass)
       // Wide, undistorted view: stereographic, ~115° across whatever the shape.
-      const vfov = Math.max(72, Math.min(130, (115 * h) / Math.max(w, 1)))
+      const vfov = Math.max(80, Math.min(130, (115 * h) / Math.max(w, 1)))
+      const el = elevationForHorizon(vfov)
       // Sky colour from the start of the pass; stars where they'll be at the peak.
       const scene = skyScene(place, pass.peak.unixMs, catalog)
       const startScene = skyScene(place, pass.start.unixMs, null)
       drawSky(ctx, {
-        vp: { width: w, height: h, vfovDeg: vfov, projection: 'stereographic' },
-        cam: basisLookingAt(view.az, view.el),
+        vp: { width: w, height: h, vfovDeg: vfov, projection: 'stereographic', cy: h * CENTRE_AT },
+        cam: basisLookingAt(view.az, el),
         scene: { ...scene, sun: startScene.sun },
         catalog,
         opaque: true,

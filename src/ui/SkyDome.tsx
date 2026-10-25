@@ -163,21 +163,28 @@ export function SkyDome({
               />
             )
           })}
-          {[30, 60, 120, 150, 210, 240, 300, 330].map((deg) => {
-            const a = (deg * Math.PI) / 180
-            return (
-              <text
-                key={deg}
-                x={C + (R - 16) * Math.sin(a)}
-                y={C - (R - 16) * Math.cos(a) + 3}
-                textAnchor="middle"
-                fontSize="8"
-                className="fill-ink-3 tnum"
-              >
-                {deg}
-              </text>
+          {[30, 60, 120, 150, 210, 240, 300, 330]
+            // Leave room for the start/end/sunset labels.
+            .filter((deg) =>
+              [pass.start.azDeg, pass.end.azDeg, sunsetAzDeg ?? -99].every(
+                (az) => Math.abs(((deg - az + 540) % 360) - 180) > 14,
+              ),
             )
-          })}
+            .map((deg) => {
+              const a = (deg * Math.PI) / 180
+              return (
+                <text
+                  key={deg}
+                  x={C + (R - 16) * Math.sin(a)}
+                  y={C - (R - 16) * Math.cos(a) + 3}
+                  textAnchor="middle"
+                  fontSize="8"
+                  className="fill-ink-3 tnum"
+                >
+                  {deg}
+                </text>
+              )
+            })}
 
           {/* Compass */}
           {(

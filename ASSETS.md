@@ -13,6 +13,8 @@ Every third-party asset, dataset or library that ships to users, or that our dat
 | Earth orientation (UT1 − UTC) | `src/engine/time/eop-data.json` | CelesTrak EOP file (IERS data), https://celestrak.org/SpaceData/ | Public data | Credited in docs/learn/01-time.md |
 | Planetary elements | `src/engine/planets/planets.ts` | JPL Solar System Dynamics, "Approximate Positions of the Planets" (E. M. Standish), https://ssd.jpl.nasa.gov/planets/approx_pos.html | U.S. Government work | Credited in code and docs |
 | Moon algorithm | `src/engine/moon/moon.ts` | Paul Schlyter, "How to compute planetary positions", https://stjarnhimlen.se/comp/ppcomp.html | Published method (reimplemented) | Credited in code |
+| Bright stars | `src/engine/stars/bright-stars.json` (from `data/fixtures/bsc5-catalog.dat`) | Yale Bright Star Catalogue, 5th ed. (Hoffleit & Warren 1991), CDS catalog V/50, https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50 | Freely distributed astronomical catalogue (NASA ADC / CDS) | Credited in code, docs and site footer |
+| World Magnetic Model 2025 | `src/engine/magnetic/wmm2025.json` (from `data/fixtures/WMM2025.COF`) | NOAA NCEI / British Geological Survey, https://www.ncei.noaa.gov/products/world-magnetic-model | U.S. Government work, public domain (17 U.S.C. 403 notice: not subject to copyright) | Credited in Sky View and docs |
 | QR code SVG | `public/qr.svg` (pre-rendered at build time) | `qrcode` npm package (build-time only, not shipped) | MIT | n/a |
 | Fremont coordinates | `src/presets.ts` | GeoNames (geonameId 5350734) | CC BY 4.0 | Credited in code; footer credit arrives with city search (Phase 3) |
 

@@ -129,14 +129,25 @@ export function SkyView({ pass, place, sensorsAllowed, onClose }: Props) {
         setClock(wall)
       }
       const t = simMs ?? wall
+      const station =
+        t >= pass.start.unixMs && t <= pass.end.unixMs ? interpolate(pass.track, t) : null
+      // Without a compass, the preview pans to follow the station.
+      if (useDrag && simMs !== null && station && !dragStart.current) {
+        let dAz = station.azDeg - drag.current.az
+        if (dAz > 180) dAz -= 360
+        if (dAz < -180) dAz += 360
+        drag.current = {
+          az: (drag.current.az + dAz * 0.08 + 360) % 360,
+          el:
+            drag.current.el + (Math.min(75, Math.max(12, station.elDeg)) - drag.current.el) * 0.08,
+        }
+      }
       const cam: CameraBasis =
         !useDrag && sensors.camRef.current
           ? sensors.camRef.current
           : basisLookingAt(drag.current.az, drag.current.el)
       const vp: Viewport = { width: w, height: h, vfovDeg: vfov, projection: 'rectilinear' }
       const scene = sceneAt(t)
-      const station =
-        t >= pass.start.unixMs && t <= pass.end.unixMs ? interpolate(pass.track, t) : null
       drawSky(ctx, {
         vp,
         cam,

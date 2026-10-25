@@ -2,7 +2,9 @@
 // Usage: node scripts/build-wmm.mjs
 import { readFileSync, writeFileSync } from 'node:fs'
 
-const lines = readFileSync(new URL('../data/fixtures/WMM2025.COF', import.meta.url), 'utf8').split('\n')
+const lines = readFileSync(new URL('../data/fixtures/WMM2025.COF', import.meta.url), 'utf8').split(
+  '\n',
+)
 const [epochStr, model] = lines[0].trim().split(/\s+/)
 const terms = []
 for (const l of lines.slice(1)) {

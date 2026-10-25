@@ -274,43 +274,43 @@ function drawMoon(ctx: CanvasRenderingContext2D, o: DrawOptions, pal: Pal) {
 
 function drawHorizon(ctx: CanvasRenderingContext2D, o: DrawOptions, pal: Pal) {
   const { cam, vp } = o
+  // Walk the horizon in azimuth order across the half of the sky in front of
+  // the camera. (Sorting points by screen x zig-zags once the projection wraps,
+  // which drew stray dark bands in early versions.)
+  const fAz = (Math.atan2(cam.forward[0], cam.forward[1]) * 180) / Math.PI
   const pts: Array<{ x: number; y: number }> = []
-  for (let az = 0; az <= 360; az += 2) {
-    const p = project(enu(az, 0), cam, vp)
+  for (let d = -110; d <= 110; d += 2) {
+    const p = project(enu(fAz + d, 0), cam, vp)
     if (p) pts.push(p)
   }
   if (o.opaque && pts.length > 1) {
-    // Ground: everything below the horizon line.
-    const sorted = [...pts].sort((a, b) => a.x - b.x)
-    ctx.fillStyle = pal.ground
-    ctx.beginPath()
-    ctx.moveTo(-10, vp.height + 10)
-    for (const p of sorted) ctx.lineTo(p.x, p.y)
-    ctx.lineTo(vp.width + 10, vp.height + 10)
-    ctx.closePath()
-    // Only fill if the horizon is actually on screen below the view; avoid filling the sky when looking down.
     const fwdEl = Math.asin(cam.forward[2]) * (180 / Math.PI)
-    if (fwdEl > -40) ctx.fill()
+    if (fwdEl > -40) {
+      const first = pts[0]!
+      const last = pts[pts.length - 1]!
+      ctx.fillStyle = pal.ground
+      ctx.beginPath()
+      ctx.moveTo(first.x < last.x ? -10 : vp.width + 10, first.y)
+      for (const p of pts) ctx.lineTo(p.x, p.y)
+      ctx.lineTo(first.x < last.x ? vp.width + 10 : -10, last.y)
+      ctx.lineTo(first.x < last.x ? vp.width + 10 : -10, vp.height + 10)
+      ctx.lineTo(first.x < last.x ? -10 : vp.width + 10, vp.height + 10)
+      ctx.closePath()
+      ctx.fill()
+    }
   }
   // Horizon line.
   ctx.strokeStyle = pal.groundLine
   ctx.lineWidth = 1
   ctx.beginPath()
-  let started = false
-  for (let az = 0; az <= 360; az += 2) {
-    const p = project(enu(az, 0), cam, vp)
-    if (!p || p.x < -200 || p.x > vp.width + 200) {
-      started = false
-      continue
-    }
-    if (!started) ctx.moveTo(p.x, p.y)
-    else ctx.lineTo(p.x, p.y)
-    started = true
-  }
+  pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)))
   ctx.stroke()
   // Degree ticks every 10°, compass letters every 45°.
   ctx.textAlign = 'center'
   for (let az = 0; az < 360; az += 10) {
+    let rel = az - fAz
+    rel = (((rel % 360) + 540) % 360) - 180
+    if (Math.abs(rel) > 110) continue
     const p = project(enu(az, 0), cam, vp)
     if (!p || p.x < 0 || p.x > vp.width) continue
     const major = az % 45 === 0

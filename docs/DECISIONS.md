@@ -115,3 +115,22 @@ satellite.js 7 re-exports an optional wasm bulk propagator that loads a pthreads
 
 ## D-018 Labs run TypeScript directly with Node (2026-10-24)
 Node 22.18+ strips TypeScript types natively. Labs (`scripts/labs/*.ts`) import the real engine with no build step or extra dependency. The engine's JSON import uses `with { type: 'json' }` so it loads in both Vite and Node.
+
+## D-019 Sky View ships now; camera optional; compass corrected and calibratable (2026-10-24)
+- **Context:** Ishaan asked for a camera/"point at the sky" view and a compass wherever we give degrees, as the reason to use this over a search result. This reverses D-011's timing (it was Phase 6).
+- **Choice:** a canvas sky renderer shared by the hero picture and Sky View.
+  - Sensors drive the view.
+  - The camera is an optional backdrop.
+  - Declination comes from NOAA WMM2025 (validated against all 100 official test points).
+  - Moon/planet calibration removes drift.
+  - Drag-to-look is the fallback.
+- **Tradeoffs:**
+  - +17 KB gzipped on the initial route (95 KB of 150).
+  - A lazy 10 KB star catalogue.
+  - Landscape mode and iOS heading offsets need real-device testing.
+
+## D-020 Yale Bright Star Catalogue to magnitude 4.5 (2026-10-24)
+- 905 stars, 39 named, 4 patterns, ~10 KB gzipped, loaded on demand.
+- Mag 4.5 is about what a suburban sky shows.
+- Precessed to date; proper motion ignored (under 10″/yr for nearly all of them).
+- Also powers the "passes right past Vega" landmark cue.
