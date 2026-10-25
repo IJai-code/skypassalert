@@ -6,7 +6,8 @@ Every third-party asset, dataset or library that ships to users, or that our dat
 | Asset | Use | Source | License / terms | Attribution |
 |---|---|---|---|---|
 | SkyPassAlert logo, favicon, hero arc | Brand | Original, drawn in SVG code (`src/brand/`, `public/favicon.svg`) | MIT (this repo) | n/a |
-| System fonts | UI text | The user's device | n/a (nothing shipped) | n/a |
+| System fonts | Body text | The user's device | n/a (nothing shipped) | n/a |
+| Archivo (variable, subset) | Instrument readouts (`public/fonts/archivo-var.woff2`) | The Archivo Project Authors, https://github.com/Omnibus-Type/Archivo | SIL Open Font License 1.1 (`public/fonts/Archivo-OFL.txt`) | OFL text shipped alongside |
 | React, React DOM | UI runtime | https://react.dev | MIT | Bundled license comments |
 | satellite.js 7.1.0 | SGP4 propagation (TEMPORARY until Phase 4) | https://github.com/shashwatak/satellite-js | MIT | License kept in bundle |
 | Orbital elements (OMM JSON) | `public/data/elements.json`, `data/archive/` | CelesTrak GP data, https://celestrak.org/NORAD/elements/ | Public data; we follow https://celestrak.org/usage-policy.php | "CelesTrak orbital data" in the site footer |

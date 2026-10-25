@@ -98,12 +98,18 @@ export function useOrientation(enabled: boolean, declinationDeg: number) {
     calibration.current += d
   }, [])
 
+  /** Sky Sync: shift the heading by part of a measured error (degrees, + = clockwise). */
+  const nudgeYaw = useCallback((deltaDeg: number) => {
+    calibration.current += deltaDeg
+  }, [])
+
   return {
     status,
     setStatus,
     camRef,
     accuracyDeg,
     calibrateTo,
+    nudgeYaw,
     calibrationDeg: () => calibration.current,
   }
 }

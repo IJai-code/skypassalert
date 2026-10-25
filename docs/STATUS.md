@@ -53,6 +53,18 @@ Public repo, CI, the Pages deploy at https://skypassalert.com (HTTPS enforced, w
 - **Numbers:** 209 tests; initial JS 95 KB (budget 150); Lighthouse 100 ×4.
 - **Needs real devices:** iPhone (heading offset, permission prompt), Android, and landscape mode. See `docs/learn/11-compass.md`.
 
+### Phase 2.6: Sky Camera + redesign (2026-10-24)
+- **Redesign:** the app is now the live sky with a camera-app mode switch (Sky / Find it / Camera), an aircraft-style heading tape and an instrument sheet. Typeface: Archivo condensed.
+- **Sky Camera:**
+  - Targets from the sky model (Moon, planets, bright stars, stations).
+  - Sky Sync corrects the compass from bright objects in the camera image.
+  - Burst capture with sharpness ranking, alignment and stacking (lighten-stacking for station trails), plus per-target enhancement.
+  - Manual exposure, ISO and focus where the browser allows it (many Android phones).
+  - Native-camera path with recipes for iPhone.
+  - Before/after comparison, captioned save and share. Nothing is uploaded.
+- **Numbers:** 218 tests; initial JS 101 KB (budget 150); Lighthouse 98–99 / 100 / 100 / 100.
+- **Not yet verified on a real phone:** the camera, stacking on real frames, and Sky Sync. These need an outdoor test.
+
 ## Next: Phase 3 (MVP v0.1)
 - Place picker: Bay Area presets, geolocation (on-device), GeoNames city search with GeoNames attribution in the footer.
 - Family mode settings (bedtime, kid wording); zh-Hans catalog for all copy.

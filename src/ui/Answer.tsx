@@ -16,6 +16,7 @@ import {
   stationName,
 } from '../copy/en.ts'
 import { countdown, dayLabel, formatDate, timeParts } from '../lib/format.ts'
+import { compass8 } from '../engine/describe/describe.ts'
 import type { HomeState } from '../lib/state.ts'
 import { CalendarButton } from './CalendarButton.tsx'
 
@@ -81,8 +82,8 @@ export function answerModel(
   }
 }
 
-/** Overlaid on the sky picture. */
-export function Headline({
+/** The sheet's first glance: one big time and the numbers that matter. */
+export function Peek({
   model,
   timeZone,
   nowMs,
@@ -95,34 +96,53 @@ export function Headline({
   const until = p ? p.start.unixMs - nowMs : 0
   return (
     <div>
-      {model.headline && (
-        <p className="mb-3 text-lg font-semibold text-balance">{model.headline}</p>
-      )}
       <div className="flex items-baseline justify-between gap-4">
-        <h1 id="answer" className="text-base font-medium text-white/80">
+        <h1 id="answer" className="hud-caps text-ink-2">
           {model.eyebrow}
         </h1>
-        {p && until > 0 && model.kind !== 'get-ready' && (
-          <span className="tnum text-sm text-white/75">{countdown(until)}</span>
+        {p && until > 0 && (
+          <span className="hud-caps text-station">{countdown(until).replace('in ', 'in ')}</span>
         )}
       </div>
+      {model.headline && (
+        <p className="mt-2 text-lg font-semibold text-balance">{model.headline}</p>
+      )}
       {p && model.kind === 'look-now' ? (
-        <p className="mt-1 text-[clamp(2.4rem,11vw,4rem)] leading-[1.02] font-semibold tracking-[-0.03em]">
-          Look {direction(liveAz(p, nowMs).azDeg)},{' '}
-          <span className="whitespace-nowrap">{fistsLabel(liveAz(p, nowMs).elDeg)} up.</span>
+        <p className="hud mt-1 text-[3.25rem] leading-[0.95] font-bold">
+          Look {direction(liveAz(p, nowMs).azDeg)}, {fistsLabel(liveAz(p, nowMs).elDeg)} up
         </p>
       ) : (
         p && <BigTime ms={p.start.unixMs} timeZone={timeZone} />
       )}
       {p && (
-        <p className="mt-2 text-lg">
-          <span
-            aria-hidden="true"
-            className="mr-2 inline-block size-2.5 rounded-full bg-station align-[0.1em]"
-          />
-          <span className="font-semibold">{capitalise(stationName(p.noradId).long)}</span>
-        </p>
+        <>
+          <p className="mt-1 text-[1.0625rem]">
+            <span
+              aria-hidden="true"
+              className="mr-2 inline-block size-2.5 rounded-full bg-station align-[0.08em]"
+            />
+            <span className="font-semibold">{capitalise(stationName(p.noradId).long)}</span>
+          </p>
+          <dl className="mt-3 grid grid-cols-4 overflow-hidden rounded-lg border border-white/10">
+            <Readout term="Height" value={`${Math.round(p.peak.elDeg)}°`} />
+            <Readout
+              term="Bright"
+              value={`${p.brightestMagnitude < 0 ? '−' : ''}${Math.abs(p.brightestMagnitude).toFixed(1)}`}
+            />
+            <Readout term="Lasts" value={minutesLabel(p.end.unixMs - p.start.unixMs)} />
+            <Readout term="Path" value={`${compass8(p.start.azDeg)}→${compass8(p.end.azDeg)}`} />
+          </dl>
+        </>
       )}
+    </div>
+  )
+}
+
+function Readout({ term, value }: { term: string; value: string }) {
+  return (
+    <div className="border-r border-white/10 px-2.5 py-2 last:border-r-0">
+      <dt className="hud-caps text-[0.625rem] text-ink-3">{term}</dt>
+      <dd className="hud mt-0.5 text-lg font-semibold whitespace-nowrap">{value}</dd>
     </div>
   )
 }
@@ -135,6 +155,7 @@ export function Details(props: {
   placeName: string
   timeZone: string
   onFindIt: () => void
+  onCamera: () => void
   onClearFocus: () => void
   nightMode: boolean
   onNightMode: (on: boolean) => void
@@ -175,9 +196,16 @@ export function Details(props: {
         <button
           type="button"
           onClick={props.onFindIt}
-          className="rounded-md bg-ink px-5 py-3 text-[0.9375rem] font-semibold text-night transition-opacity hover:opacity-90"
+          className="hud-caps rounded-md bg-ink px-5 py-3 text-[0.8125rem] text-night transition-opacity hover:opacity-90"
         >
           Find it in the sky
+        </button>
+        <button
+          type="button"
+          onClick={props.onCamera}
+          className="hud-caps rounded-md bg-station px-5 py-3 text-[0.8125rem] text-black transition-opacity hover:opacity-90"
+        >
+          Sky Camera
         </button>
         <CalendarButton pass={p} placeName={placeName} timeZone={timeZone} />
       </div>
@@ -220,9 +248,11 @@ function landmarkSentence(l: Landmark): string {
 function BigTime({ ms, timeZone }: { ms: number; timeZone: string }) {
   const { clock, period } = timeParts(ms, timeZone)
   return (
-    <p className="tnum mt-1 text-[clamp(4.25rem,21vw,7rem)] leading-[0.92] font-semibold tracking-[-0.04em]">
+    <p className="hud mt-1 text-[5.5rem] leading-[0.86] font-bold tracking-[-0.02em] [font-stretch:62%]">
       {clock}
-      <span className="ml-2 text-[0.34em] font-medium tracking-normal text-white/75">{period}</span>
+      <span className="ml-1.5 text-[0.3em] font-semibold tracking-[0.08em] text-ink-2 [font-stretch:80%]">
+        {period}
+      </span>
     </p>
   )
 }

@@ -77,16 +77,19 @@ export function project(
   const y = dot3(v, cam.up)
   const z = dot3(v, cam.forward)
   const half = (vp.vfovDeg / 2) * D
+  const cx = vp.cx ?? vp.width / 2
+  const cy = vp.cy ?? vp.height / 2
   if (vp.projection === 'rectilinear') {
     if (z <= 0.01) return null
     const k = vp.height / 2 / Math.tan(half)
-    return { x: vp.width / 2 + (x / z) * k, y: vp.height / 2 - (y / z) * k, z }
+    return { x: cx + (x / z) * k, y: cy - (y / z) * k, z }
   }
-  if (z <= -0.95) return null
+  // Far behind the camera the stereographic projection runs off to infinity.
+  if (z <= -0.6) return null
   const k = vp.height / 2 / (2 * Math.tan(half / 2))
   return {
-    x: vp.width / 2 + ((2 * x) / (1 + z)) * k,
-    y: vp.height / 2 - ((2 * y) / (1 + z)) * k,
+    x: cx + ((2 * x) / (1 + z)) * k,
+    y: cy - ((2 * y) / (1 + z)) * k,
     z,
   }
 }
@@ -99,4 +102,16 @@ export function turnTo(cam: CameraBasis, target: V3): { turnDeg: number; tiltDeg
   if (turn > 180) turn -= 360
   if (turn < -180) turn += 360
   return { turnDeg: turn, tiltDeg: t.elDeg - camAe.elDeg }
+}
+
+/** Inverse of `project` for the rectilinear camera: screen pixel → sky direction. */
+export function unproject(px: number, py: number, cam: CameraBasis, vp: Viewport): V3 {
+  const k = vp.height / 2 / Math.tan(((vp.vfovDeg / 2) * Math.PI) / 180)
+  const x = (px - (vp.cx ?? vp.width / 2)) / k
+  const y = -(py - (vp.cy ?? vp.height / 2)) / k
+  return norm3([
+    cam.forward[0] + x * cam.right[0] + y * cam.up[0],
+    cam.forward[1] + x * cam.right[1] + y * cam.up[1],
+    cam.forward[2] + x * cam.right[2] + y * cam.up[2],
+  ])
 }

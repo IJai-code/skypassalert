@@ -32,7 +32,12 @@ export default tseslint.config(
     // Dense numeric kernels index fixed-size arrays whose bounds hold by
     // construction (Legendre tables, catalogue rows, projected points). `!` there
     // states that invariant; elsewhere it stays banned.
-    files: ['src/engine/magnetic/wmm.ts', 'src/engine/sky/scene.ts', 'src/sky/drawSky.ts'],
+    files: [
+      'src/engine/magnetic/wmm.ts',
+      'src/engine/sky/scene.ts',
+      'src/sky/drawSky.ts',
+      'src/photo/*.ts',
+    ],
     rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
   },
   {

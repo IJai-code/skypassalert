@@ -1,4 +1,4 @@
-import { azEl, basisLookingAt, enu, project, turnTo } from './projection.ts'
+import { azEl, basisLookingAt, enu, project, turnTo, unproject } from './projection.ts'
 import { cameraFromDevice, forwardAzimuth, smoothBasis } from './orientation.ts'
 
 const vp = { width: 400, height: 800, vfovDeg: 70, projection: 'rectilinear' as const }
@@ -22,6 +22,13 @@ describe('sky camera', () => {
     const t = turnTo(basisLookingAt(200, 10), enu(245, 30))
     expect(t.turnDeg).toBeCloseTo(45, 6)
     expect(t.tiltDeg).toBeCloseTo(20, 6)
+  })
+  it('unproject inverts project (Sky Sync maps camera pixels back to the sky)', () => {
+    const cam = basisLookingAt(120, 35, 7)
+    const p = project(enu(131, 41), cam, vp)!
+    const a = azEl(unproject(p.x, p.y, cam, vp))
+    expect(a.azDeg).toBeCloseTo(131, 6)
+    expect(a.elDeg).toBeCloseTo(41, 6)
   })
   it('round-trips azimuth/elevation', () => {
     const a = azEl(enu(312.5, 41.2))
@@ -70,5 +77,20 @@ describe('phone orientation → camera', () => {
     expect(Math.sign(d(c, m.forward))).toBe(Math.sign(d(cr, ref.forward)))
     expect(azEl(m.forward).azDeg).toBeGreaterThan(10)
     expect(azEl(m.forward).azDeg).toBeLessThan(30)
+  })
+})
+
+describe('off-centre viewports', () => {
+  it('draws the view centre at (cx, cy) when given', () => {
+    const cam = basisLookingAt(200, 20)
+    const p = project(enu(200, 20), cam, {
+      width: 400,
+      height: 800,
+      vfovDeg: 100,
+      projection: 'stereographic',
+      cy: 250,
+    })!
+    expect(p.x).toBeCloseTo(200, 6)
+    expect(p.y).toBeCloseTo(250, 6)
   })
 })
