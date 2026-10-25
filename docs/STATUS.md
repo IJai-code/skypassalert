@@ -65,8 +65,22 @@ Public repo, CI, the Pages deploy at https://skypassalert.com (HTTPS enforced, w
 - **Numbers:** 218 tests; initial JS 101 KB (budget 150); Lighthouse 98–99 / 100 / 100 / 100.
 - **Not yet verified on a real phone:** the camera, stacking on real frames, and Sky Sync. These need an outdoor test.
 
+### Phase 2.7: Product redesign + your own location (2026-10-25)
+- **Tabbed app** following Ishaan's reference: Tonight (cards), Sky (live), Camera (Sky Camera), Passes (week).
+  - Cyan for actions; amber for the station.
+  - Image cards with NASA public-domain photos.
+- **Hero card:** tonight's pass drawn on the real sky, plus stat tiles. Pass cards show each pass's own sky.
+- **Cleaner Sky Sync overlay:** rings on the Moon and planets, compass letters, one target tag.
+- **Location:**
+  - "Use my location" (on-device, rounded to ~100 m).
+  - Search over 8,319 cities.
+  - Remembered on the device.
+  - Checked worldwide: Sydney shows its ISS pass and the Southern Cross.
+- **Calendar:** "Add this week's best to my calendar" as one file.
+- **Numbers:** 223 tests; initial JS 105 KB; Lighthouse 97 / 100 / 100 / 100.
+
 ## Next: Phase 3 (MVP v0.1)
-- Place picker: Bay Area presets, geolocation (on-device), GeoNames city search with GeoNames attribution in the footer.
+- ~~Place picker~~: done early (D-026).
 - Family mode settings (bedtime, kid wording); zh-Hans catalog for all copy.
 - Share card PNG with QR code; 14-day `.ics`.
 - /privacy, /about, SEO basics; pre-rendered first paint for the default place.

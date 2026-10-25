@@ -29,30 +29,28 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('home screen', () => {
-  it('leads with tonight’s best pass: time, object and a plain-language path', async () => {
+describe('the app', () => {
+  it('Tonight leads with the best pass: time, object, readouts and actions', async () => {
     render(<App />)
     expect(await screen.findByRole('heading', { name: /tonight in fremont/i })).toBeInTheDocument()
     expect(screen.getByText('7:32')).toBeInTheDocument()
-    expect(screen.getByText(/tiangong, china’s space station/i)).toBeInTheDocument()
-    const how = screen.getByRole('region', { name: /how to see it/i })
+    expect(screen.getAllByText(/tiangong, china’s space station/i).length).toBeGreaterThan(0)
+    expect(screen.getByText('Height')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /find it in the sky/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /remind me/i })).toBeInTheDocument()
+  })
+
+  it('explains how to see it, step by step', async () => {
+    render(<App />)
+    const how = await screen.findByRole('region', { name: /how to see it/i })
     expect(within(how).getByText(/rises low in the west-southwest/i)).toBeInTheDocument()
     expect(within(how).getByText(/where the sun went down/i)).toBeInTheDocument()
-    expect(within(how).getByRole('button', { name: /find it in the sky/i })).toBeInTheDocument()
-    expect(within(how).getByRole('button', { name: /sky camera/i })).toBeInTheDocument()
   })
 
-  it('shows instrument readouts for the pass', async () => {
+  it('draws the pass on the real sky and on a compass map', async () => {
     render(<App />)
-    await screen.findByRole('heading', { name: /tonight in fremont/i })
-    expect(screen.getByText('Height')).toBeInTheDocument()
-    expect(screen.getAllByText('80°').length).toBeGreaterThan(0)
-  })
-
-  it('draws the live sky and a labelled sky map', async () => {
-    render(<App />)
-    expect(await screen.findByRole('img', { name: /sky map/i })).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: /sky view facing/i })).toBeInTheDocument()
+    expect(await screen.findByRole('img', { name: /the sky facing/i })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /sky map/i })).toBeInTheDocument()
   })
 
   it('gives bearings in degrees from true north, with the magnetic equivalent', async () => {
@@ -62,26 +60,23 @@ describe('home screen', () => {
     expect(within(which).getByText(/true north/i)).toBeInTheDocument()
   })
 
-  it('switches to Sky Camera with targets from the sky model, and back', async () => {
+  it('opens Sky Camera from the tab bar, with a shutter and the phone-camera option', async () => {
     render(<App />)
     await screen.findByRole('heading', { name: /tonight in fremont/i })
-    screen.getByRole('tab', { name: /camera/i }).click()
-    await vi.waitFor(() =>
-      expect(screen.getByRole('tab', { name: /camera/i })).toHaveAttribute('aria-selected', 'true'),
-    )
+    screen.getByRole('button', { name: /^camera$/i }).click()
     expect(await screen.findByRole('button', { name: /take a stacked photo/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /phone camera/i })).toBeInTheDocument()
-    screen.getByRole('tab', { name: /^sky$/i }).click()
-    await vi.waitFor(() =>
-      expect(screen.getByRole('tab', { name: /^sky$/i })).toHaveAttribute('aria-selected', 'true'),
-    )
+    screen.getByRole('button', { name: /^tonight$/i }).click()
+    expect(await screen.findByRole('heading', { name: /tonight in fremont/i })).toBeInTheDocument()
   })
 
-  it('lists the week as a board and keeps pre-dawn passes separate', async () => {
+  it('lists the week on the Passes tab, with evenings and before-dawn separated', async () => {
     render(<App />)
-    const week = await screen.findByRole('region', { name: /next 7 evenings/i })
-    expect(within(week).getAllByRole('listitem').length).toBeGreaterThan(5)
-    expect(within(week).getByRole('button', { name: /before-dawn passes/i })).toBeInTheDocument()
+    await screen.findByRole('heading', { name: /tonight in fremont/i })
+    screen.getByRole('button', { name: /^passes$/i }).click()
+    expect(await screen.findByRole('heading', { name: /^passes$/i })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /before dawn/i })).toBeInTheDocument()
+    expect(screen.getAllByRole('listitem').length).toBeGreaterThan(4)
   })
 
   it('says how old the orbit data is', async () => {

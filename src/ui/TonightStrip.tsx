@@ -12,9 +12,17 @@ type Props = {
   timeZone: string
   bedtime: string // "HH:MM"
   selectedKey?: string | undefined
+  titleHidden?: boolean
 }
 
-export function TonightStrip({ evening, passes, timeZone, bedtime, selectedKey }: Props) {
+export function TonightStrip({
+  evening,
+  passes,
+  timeZone,
+  bedtime,
+  selectedKey,
+  titleHidden = false,
+}: Props) {
   if (evening.sunsetMs === null) return null
   const [bh, bm] = bedtime.split(':').map(Number) as [number, number]
   const date = parseDateKey(evening.dateKey)
@@ -47,7 +55,7 @@ export function TonightStrip({ evening, passes, timeZone, bedtime, selectedKey }
 
   return (
     <section aria-labelledby="tonight-strip" className="mt-2">
-      <h2 id="tonight-strip" className="label">
+      <h2 id="tonight-strip" className={titleHidden ? 'sr-only' : 'label'}>
         Tonight
       </h2>
       <div className="relative mt-9 h-9">

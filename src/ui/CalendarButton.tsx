@@ -8,6 +8,7 @@ import { pathSentence, startCue, stationName } from '../copy/en.ts'
 import { buildIcs } from '../lib/ics.ts'
 import { detectInAppBrowser } from '../lib/env.ts'
 import { InAppBrowserSheet } from './InAppBrowserSheet.tsx'
+import { IconBell } from './app/Icons.tsx'
 
 type Props = { pass: ForecastPass; placeName: string; timeZone: string }
 
@@ -45,9 +46,9 @@ export function CalendarButton({ pass, placeName }: Props) {
       <button
         type="button"
         onClick={download}
-        className="rounded-md border border-hair-strong px-4 py-2.5 text-[0.9375rem] font-medium text-ink transition-colors hover:border-ink-2 hover:bg-night-2"
+        className="display flex items-center justify-center gap-2 rounded-2xl bg-white/[0.06] px-4 py-3.5 text-[0.9375rem] text-ink ring-1 ring-hair transition-colors hover:bg-white/10"
       >
-        Remind me 10 min before
+        <IconBell className="size-4" /> Remind me
       </button>
       {sheet && <InAppBrowserSheet onClose={() => setSheet(false)} />}
     </>

@@ -17,7 +17,15 @@ Every third-party asset, dataset or library that ships to users, or that our dat
 | Bright stars | `src/engine/stars/bright-stars.json` (from `data/fixtures/bsc5-catalog.dat`) | Yale Bright Star Catalogue, 5th ed. (Hoffleit & Warren 1991), CDS catalog V/50, https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50 | Freely distributed astronomical catalogue (NASA ADC / CDS) | Credited in code, docs and site footer |
 | World Magnetic Model 2025 | `src/engine/magnetic/wmm2025.json` (from `data/fixtures/WMM2025.COF`) | NOAA NCEI / British Geological Survey, https://www.ncei.noaa.gov/products/world-magnetic-model | U.S. Government work, public domain (17 U.S.C. 403 notice: not subject to copyright) | Credited in Sky View and docs |
 | QR code SVG | `public/qr.svg` (pre-rendered at build time) | `qrcode` npm package (build-time only, not shipped) | MIT | n/a |
-| Fremont coordinates | `src/presets.ts` | GeoNames (geonameId 5350734) | CC BY 4.0 | Credited in code; footer credit arrives with city search (Phase 3) |
+| Fremont coordinates | `src/presets.ts` | GeoNames (geonameId 5350734) | CC BY 4.0 | Footer + place picker |
+| City search list | `public/data/cities.json` (built by `scripts/build-cities.mjs` from cities15000 + admin1CodesASCII) | GeoNames, https://download.geonames.org/export/dump/ | CC BY 4.0 | “City data © GeoNames (CC BY 4.0)” in the place picker and footer |
+| Moon photo | `public/img/moon.webp` | NASA Goddard / LRO, images.nasa.gov GSFC_20171208_Archive_e000868 | NASA media: public domain, no endorsement implied | Credited on card |
+| Saturn photo | `public/img/saturn.webp` | NASA/JPL/Space Science Institute (Cassini), PIA11613 | Public domain | Credited on card |
+| Jupiter photo | `public/img/jupiter.webp` | NASA/JPL/Space Science Institute (Cassini), PIA04866 | Public domain | Credited on card |
+| Mars photo | `public/img/mars.webp` | NASA/JPL/USGS (Viking), PIA00407 | Public domain | Credited on card |
+| Venus photo | `public/img/venus.webp` | NASA/JPL-Caltech (Mariner 10), PIA23791 | Public domain | Credited on card |
+| ISS photo | `public/img/iss.webp` | NASA, Expedition 56 crew, iss056e201248 | Public domain | Credited on card |
+| Milky Way photo | `public/img/milkyway.webp` (cropped to remove a spacecraft window label) | NASA, ISS crew, iss074e0521637 | Public domain | Credited on card |
 
 ## Planned (not yet shipped)
 | Asset | Phase | Source | License / terms | Attribution required |

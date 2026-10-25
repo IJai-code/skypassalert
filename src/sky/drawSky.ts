@@ -25,6 +25,15 @@ export type DrawOptions = {
   formatMinute: (ms: number) => string
   /** Device pixel ratio already applied to the context transform. */
   labels: boolean
+  /**
+   * 'full' draws the whole sky (picture and live views without a camera).
+   * 'clean' is for the camera: nothing but thin rings on the Moon and planets,
+   * the horizon and compass letters, the target and (for stations) the path,
+   * so the real sky stays the hero.
+   */
+  style?: 'full' | 'clean'
+  /** Ring and label the thing being aimed at. */
+  highlight?: { azDeg: number; elDeg: number; label: string } | null
 }
 
 type Pal = {
@@ -129,7 +138,8 @@ export function drawSky(ctx: CanvasRenderingContext2D, o: DrawOptions): void {
 
   // 2. Stars, faint first so bright ones sit on top.
   const lim = limitingMagnitude(scene.sun.elDeg)
-  if (o.catalog) {
+  const clean = o.style === 'clean'
+  if (o.catalog && !clean) {
     const { stars, lines, named } = o.catalog
     const pos: Array<{ x: number; y: number } | null> = new Array(stars.length).fill(null)
     for (let i = stars.length - 1; i >= 0; i--) {
@@ -194,20 +204,41 @@ export function drawSky(ctx: CanvasRenderingContext2D, o: DrawOptions): void {
 
   // 3. Planets and the Moon.
   ctx.font = '600 11px system-ui, -apple-system, sans-serif'
-  for (const pl of scene.planets) {
-    if (pl.elDeg < -1 || pl.magnitude > Math.max(lim, 1.5)) continue
-    const p = P(enu(pl.azDeg, pl.elDeg))
-    if (!p) continue
-    ctx.fillStyle = o.red ? pal.ink : '#fff3d8'
-    ctx.beginPath()
-    ctx.arc(p.x, p.y, Math.max(1.8, 3.4 - 0.45 * pl.magnitude), 0, Math.PI * 2)
-    ctx.fill()
-    if (o.labels) {
-      ctx.fillStyle = pal.ink
-      ctx.fillText(pl.id[0]!.toUpperCase() + pl.id.slice(1), p.x + 8, p.y + 4)
+  if (clean) {
+    // Thin rings with names: enough to confirm the overlay sits on the real thing.
+    const ring = (az: number, el: number, r: number, name: string) => {
+      const p = P(enu(az, el))
+      if (!p || el < -1) return
+      ctx.strokeStyle = 'rgba(233,242,245,0.75)'
+      ctx.lineWidth = 1.25
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.fillStyle = 'rgba(233,242,245,0.85)'
+      ctx.font = '600 12px Archivo, system-ui, sans-serif'
+      ctx.fillText(name, p.x + r + 6, p.y + 4)
     }
+    for (const pl of scene.planets) {
+      if (pl.magnitude <= 1.5)
+        ring(pl.azDeg, pl.elDeg, 10, pl.id[0]!.toUpperCase() + pl.id.slice(1))
+    }
+    if (scene.moon.illumination > 0.03) ring(scene.moon.azDeg, scene.moon.elDeg, 22, 'Moon')
+  } else {
+    for (const pl of scene.planets) {
+      if (pl.elDeg < -1 || pl.magnitude > Math.max(lim, 1.5)) continue
+      const p = P(enu(pl.azDeg, pl.elDeg))
+      if (!p) continue
+      ctx.fillStyle = o.red ? pal.ink : '#fff3d8'
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, Math.max(1.8, 3.4 - 0.45 * pl.magnitude), 0, Math.PI * 2)
+      ctx.fill()
+      if (o.labels) {
+        ctx.fillStyle = pal.ink
+        ctx.fillText(pl.id[0]!.toUpperCase() + pl.id.slice(1), p.x + 8, p.y + 4)
+      }
+    }
+    if (scene.moon.elDeg > -1) drawMoon(ctx, o, pal)
   }
-  if (scene.moon.elDeg > -1) drawMoon(ctx, o, pal)
 
   // 4. Ground and horizon with compass points.
   drawHorizon(ctx, o, pal)
@@ -228,6 +259,32 @@ export function drawSky(ctx: CanvasRenderingContext2D, o: DrawOptions): void {
       ctx.beginPath()
       ctx.arc(p.x, p.y, 4, 0, Math.PI * 2)
       ctx.fill()
+    }
+  }
+
+  // 6. The target: a cyan ring with a label tag.
+  if (o.highlight) {
+    const p = P(enu(o.highlight.azDeg, o.highlight.elDeg))
+    if (p) {
+      const cyan = o.red ? pal.ink : '#40c9d9'
+      ctx.strokeStyle = cyan
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, 30, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.font = '700 12px Archivo, system-ui, sans-serif'
+      const text = o.highlight.label.toUpperCase()
+      const tw = ctx.measureText(text).width + 16
+      const tx = p.x - tw / 2
+      const ty = p.y - 30 - 28
+      ctx.fillStyle = cyan
+      ctx.beginPath()
+      ctx.roundRect?.(tx, ty, tw, 20, 10)
+      ctx.fill()
+      ctx.fillStyle = o.red ? '#000' : '#03161c'
+      ctx.textAlign = 'center'
+      ctx.fillText(text, p.x, ty + 14)
+      ctx.textAlign = 'left'
     }
   }
 }
@@ -314,6 +371,13 @@ function drawHorizon(ctx: CanvasRenderingContext2D, o: DrawOptions, pal: Pal) {
     const p = project(enu(az, 0), cam, vp)
     if (!p || p.x < 0 || p.x > vp.width) continue
     const major = az % 45 === 0
+    if (o.style === 'clean') {
+      if (az % 90 !== 0) continue
+      ctx.fillStyle = 'rgba(233,242,245,0.8)'
+      ctx.font = '700 13px Archivo, system-ui, sans-serif'
+      ctx.fillText(COMPASS[az / 45]!, p.x, p.y - 8)
+      continue
+    }
     ctx.strokeStyle = pal.groundLine
     ctx.beginPath()
     ctx.moveTo(p.x, p.y)

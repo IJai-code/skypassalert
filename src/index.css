@@ -18,20 +18,25 @@
  * - Night mode swaps everything to dim red to protect dark-adapted eyes.
  */
 :root {
-  --night: #080c1a;
-  --night-2: #0d1326;
-  --hair: rgb(150 165 205 / 0.16);
-  --hair-strong: rgb(150 165 205 / 0.3);
-  --ink: #eceff7;
-  --ink-2: #a9b2cc;
-  --ink-3: #737c99;
+  /* Deep teal-navy night (direction set by Ishaan's reference, 2026-10-24). */
+  --night: #061219;
+  --night-2: #0c1d26;
+  --surface: #0f232d;
+  --surface-2: #142c38;
+  --hair: rgb(140 200 215 / 0.12);
+  --hair-strong: rgb(140 200 215 / 0.24);
+  --ink: #e9f2f5;
+  --ink-2: #a3bac3;
+  --ink-3: #6d8a95;
+  /* Cyan = things you can tap. Amber = the station, and only the station. */
+  --action: #40c9d9;
+  --action-ink: #03161c;
   --station: #ffc65c;
   --station-soft: rgb(255 198 92 / 0.28);
-  /* Sky darkness, from daylight to full night (tonight strip). */
-  --sky-day: #34508a;
-  --sky-civil: #233765;
-  --sky-nautical: #162246;
-  --sky-astro: #0c1330;
+  --sky-day: #2f5f86;
+  --sky-civil: #1e4566;
+  --sky-nautical: #132e47;
+  --sky-astro: #0a1a2a;
   color-scheme: dark;
 }
 
@@ -51,6 +56,10 @@
   --sky-civil: #2a0705;
   --sky-nautical: #1a0403;
   --sky-astro: #0d0201;
+  --surface: #0d0101;
+  --surface-2: #160202;
+  --action: #c7362b;
+  --action-ink: #000;
 }
 
 @theme inline {
@@ -63,6 +72,10 @@
   --color-ink-3: var(--ink-3);
   --color-station: var(--station);
   --color-station-soft: var(--station-soft);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-action: var(--action);
+  --color-action-ink: var(--action-ink);
 }
 
 @theme {
@@ -117,6 +130,18 @@
     text-transform: uppercase;
     letter-spacing: 0.14em;
     font-size: 0.6875rem;
+  }
+  /* Display headings: Archivo at normal width, heavy. */
+  .display {
+    font-family: var(--font-hud);
+    font-stretch: 100%;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+  .card {
+    background: linear-gradient(180deg, var(--surface-2), var(--surface));
+    border: 1px solid var(--hair);
+    border-radius: 20px;
   }
   /* Frosted panel over the live sky. */
   .glass {
