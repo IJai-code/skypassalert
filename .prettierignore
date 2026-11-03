@@ -3,3 +3,8 @@ coverage
 .lighthouseci
 package-lock.json
 *.md
+public/data/earth-110m.json
+# Written by the Data workflow bot; formatting is the bot's, not ours.
+data/archive
+src/engine/time/eop-data.json
+public/data/elements.json

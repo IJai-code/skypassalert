@@ -117,3 +117,43 @@ export const minutesLabel = (ms: number) => {
   const m = Math.max(1, Math.round(ms / 60_000))
   return `${m} min`
 }
+
+// ── The Night (Tonight tab): one line per kind of stop ───────────────────
+
+export const PLANET_NAMES: Record<string, string> = {
+  mercury: 'Mercury',
+  venus: 'Venus',
+  mars: 'Mars',
+  jupiter: 'Jupiter',
+  saturn: 'Saturn',
+}
+
+/** "Waxing crescent", "Full Moon"… from the lit fraction. */
+export function moonPhaseName(illumination: number, waxing: boolean): string {
+  if (illumination < 0.04) return 'New Moon'
+  if (illumination > 0.96) return 'Full Moon'
+  const side = waxing ? 'Waxing' : 'Waning'
+  if (illumination < 0.45) return `${side} crescent`
+  if (illumination < 0.55) return waxing ? 'First quarter' : 'Last quarter'
+  return `${side} gibbous`
+}
+
+/** Where something is, in words: "southeast, 3 fists up". */
+export const whereInSky = (azDeg: number, elDeg: number) =>
+  `${direction(azDeg)}, ${fistsLabel(elDeg)} up`
+
+export function planetLine(magnitude: number): string {
+  if (magnitude < -3) return 'Brighter than anything but the Moon.'
+  if (magnitude < -1.5) return 'Brighter than any star.'
+  if (magnitude < 0.5) return 'As bright as the brightest stars, and it doesn’t twinkle.'
+  return 'An easy, steady point of light.'
+}
+
+export const NIGHT_COPY = {
+  sunset: (dir: string) =>
+    `The sun goes down in the ${dir}. Stations are easiest in the next two hours: still in sunlight high up, while your sky turns dark.`,
+  dark: 'Civil twilight ends: dark enough for the brightest stars and planets. Give your eyes a few minutes away from bright screens.',
+  sunrise: 'The night ends here.',
+  dawnPass: 'Before dawn, for early risers.',
+  weakPass: 'Low or faint: listed so you know, not worth a special trip.',
+}

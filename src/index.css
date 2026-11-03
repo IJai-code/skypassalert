@@ -18,16 +18,16 @@
  * - Night mode swaps everything to dim red to protect dark-adapted eyes.
  */
 :root {
-  /* Deep teal-navy night (direction set by Ishaan's reference, 2026-10-24). */
-  --night: #061219;
-  --night-2: #0c1d26;
-  --surface: #0f232d;
-  --surface-2: #142c38;
-  --hair: rgb(140 200 215 / 0.12);
-  --hair-strong: rgb(140 200 215 / 0.24);
-  --ink: #e9f2f5;
-  --ink-2: #a3bac3;
-  --ink-3: #6d8a95;
+  /* The night itself (D-029): the page is the sky, chrome is glass over it. */
+  --night: #03050b;
+  --night-2: #080c17;
+  --surface: #0b101c;
+  --surface-2: #111827;
+  --hair: rgb(170 190 230 / 0.12);
+  --hair-strong: rgb(170 190 230 / 0.24);
+  --ink: #eef1f7;
+  --ink-2: #aab3c7;
+  --ink-3: #737d95;
   /* Cyan = things you can tap. Amber = the station, and only the station. */
   --action: #40c9d9;
   --action-ink: #03161c;

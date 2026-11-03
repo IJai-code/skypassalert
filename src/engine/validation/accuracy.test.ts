@@ -11,6 +11,7 @@ import { satelliteJsPropagator } from '../propagate/satellitejs-adapter.ts'
 import type { OmmElements, Satellite } from '../propagate/propagator.ts'
 import { findAboveIntervals } from '../passes/finder.ts'
 import { skyAt } from '../sky/sky.ts'
+import { centralAngleDeg, subpoint } from '../sky/subpoint.ts'
 import { moonAt } from '../sky/tonight.ts'
 import { moonPositionKm } from '../moon/moon.ts'
 import { planetState, type PlanetId } from '../planets/planets.ts'
@@ -32,6 +33,9 @@ type Ref = {
     azDeg: number
     elDeg: number
     rangeKm: number
+    subLatDeg?: number
+    subLonDeg?: number
+    heightKm?: number
   }>
   sun: Array<{ unixMs: number; observer: Obs; azDeg: number; elDeg: number }>
   moon: Array<{
@@ -112,6 +116,23 @@ describe.runIf(hasRef)('accuracy vs Skyfield', () => {
     report['Satellite position (all geometry)'] = { ...stats(posErrM), unit: 'm' }
     report['Satellite direction (when above horizon)'] = { ...stats(angErr), unit: '″' }
     expect(stats(posErrM).max).toBeLessThan(25)
+  })
+
+  it('sub-satellite point (Wave Back globe)', () => {
+    const errKm: number[] = []
+    const hErrKm: number[] = []
+    for (const c of r.satellites) {
+      if (c.subLatDeg === undefined || c.subLonDeg === undefined || c.heightKm === undefined)
+        continue
+      const sp = subpoint(satFor(c.noradId).propagate(c.unixMs).rTeme, skyAt(c.unixMs).gmstRad)
+      const ang = centralAngleDeg(sp, { latDeg: c.subLatDeg, lonDeg: c.subLonDeg })
+      errKm.push(ang * DEG * 6371)
+      hErrKm.push(Math.abs(sp.heightKm - c.heightKm))
+    }
+    if (!errKm.length) return
+    report['Sub-satellite point'] = { ...stats(errKm.map((k) => k * 1000)), unit: 'm' }
+    report['Station height'] = { ...stats(hErrKm.map((k) => k * 1000)), unit: 'm' }
+    expect(stats(errKm).max).toBeLessThan(1)
   })
 
   it('rise / set times at 10°', () => {
