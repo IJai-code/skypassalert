@@ -7,6 +7,7 @@ import { epochToUnixMs, type OmmElements, type Propagator } from './propagate/pr
 import type { Place } from './place.ts'
 import { eveningFor, type Evening } from './sky/sunEvents.ts'
 import { moonAt, planetsVisible, type MoonInfo, type PlanetSighting } from './sky/tonight.ts'
+import { stationView, type StationView } from './sky/subpoint.ts'
 import { addDays, localDateKey, parseDateKey, zonedTimeToUnixMs } from './time/zone.ts'
 import { DEFAULT_EOP, type EopTable } from './time/scales.ts'
 
@@ -24,8 +25,13 @@ export type NightSky = {
   planets: PlanetSighting[]
 }
 
-/** A visible pass plus where the Moon is at its peak (for the sky map). */
-export type ForecastPass = VisiblePass & { moonAtPeak: MoonInfo }
+/**
+ * A visible pass plus where the Moon is at its peak (for the sky map) and
+ * where the station is above Earth around it (for Wave Back).
+ */
+export type ForecastPass = VisiblePass & { moonAtPeak: MoonInfo; station: StationView }
+
+const STATION_MARGIN_MS = 10 * 60_000
 
 export type Forecast = {
   place: Place
@@ -53,7 +59,7 @@ export function forecast(req: ForecastRequest): Forecast {
   const propagator = req.propagator ?? satelliteJsPropagator
   const toMs = req.fromMs + days * 86_400_000
 
-  const passes: VisiblePass[] = []
+  const passes: Array<VisiblePass & { station: StationView }> = []
   const elements: ElementsInfo[] = []
   for (const el of req.elements) {
     elements.push({
@@ -62,7 +68,12 @@ export function forecast(req: ForecastRequest): Forecast {
       epochMs: epochToUnixMs(el.EPOCH),
     })
     const sat = propagator.init(el)
-    passes.push(...findPasses(sat, req.place, req.fromMs, toMs, { ...req.passOptions, eop }))
+    for (const p of findPasses(sat, req.place, req.fromMs, toMs, { ...req.passOptions, eop })) {
+      // Ten minutes either side: enough ground track to cross the globe view.
+      const from = p.start.unixMs - STATION_MARGIN_MS
+      const to = p.end.unixMs + STATION_MARGIN_MS
+      passes.push({ ...p, station: stationView(sat, from, to, p.peak.unixMs, 30_000, eop) })
+    }
   }
   passes.sort((a, b) => a.start.unixMs - b.start.unixMs)
   const withMoon: ForecastPass[] = passes.map((p) => ({

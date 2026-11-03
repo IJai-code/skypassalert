@@ -117,8 +117,21 @@ for norad, (omm, sat) in sats.items():
         o = random_observer()
         t = t_from_ms(ms)
         alt, az, dist = (sat - topos(o)).at(t).altaz()
+        # Point on the ground under the station (Wave Back's globe).
+        geo = sat.at(t)
+        sp = wgs84.subpoint_of(geo)
         out["satellites"].append(
-            {"noradId": norad, "unixMs": ms, "observer": o, "azDeg": az.degrees, "elDeg": alt.degrees, "rangeKm": dist.km}
+            {
+                "noradId": norad,
+                "unixMs": ms,
+                "observer": o,
+                "azDeg": az.degrees,
+                "elDeg": alt.degrees,
+                "rangeKm": dist.km,
+                "subLatDeg": sp.latitude.degrees,
+                "subLonDeg": sp.longitude.degrees,
+                "heightKm": wgs84.height_of(geo).km,
+            }
         )
 
 # 2. Sun, Moon and planets: random times in 2026–2027, random observers.

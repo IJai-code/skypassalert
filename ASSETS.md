@@ -19,6 +19,7 @@ Every third-party asset, dataset or library that ships to users, or that our dat
 | QR code SVG | `public/qr.svg` (pre-rendered at build time) | `qrcode` npm package (build-time only, not shipped) | MIT | n/a |
 | Fremont coordinates | `src/presets.ts` | GeoNames (geonameId 5350734) | CC BY 4.0 | Footer + place picker |
 | City search list | `public/data/cities.json` (built by `scripts/build-cities.mjs` from cities15000 + admin1CodesASCII) | GeoNames, https://download.geonames.org/export/dump/ | CC BY 4.0 | “City data © GeoNames (CC BY 4.0)” in the place picker and footer |
+| Earth outlines and sea names | `public/data/earth-110m.json` (built by `scripts/build-earth.mjs` from `ne_110m_land` + `ne_110m_geography_marine_polys`, v5.1.2) | Natural Earth, https://www.naturalearthdata.com/ (via https://github.com/nvkelso/natural-earth-vector) | Public domain | Not required; credited in the footer and docs/learn/14-wave-back.md |
 | Moon photo | `public/img/moon.webp` | NASA Goddard / LRO, images.nasa.gov GSFC_20171208_Archive_e000868 | NASA media: public domain, no endorsement implied | Credited on card |
 | Saturn photo | `public/img/saturn.webp` | NASA/JPL/Space Science Institute (Cassini), PIA11613 | Public domain | Credited on card |
 | Jupiter photo | `public/img/jupiter.webp` | NASA/JPL/Space Science Institute (Cassini), PIA04866 | Public domain | Credited on card |

@@ -46,7 +46,7 @@ export function CalendarButton({ pass, placeName }: Props) {
       <button
         type="button"
         onClick={download}
-        className="display flex items-center justify-center gap-2 rounded-2xl bg-white/[0.06] px-4 py-3.5 text-[0.9375rem] text-ink ring-1 ring-hair transition-colors hover:bg-white/10"
+        className="display flex items-center justify-center gap-2 rounded-full bg-white/[0.08] px-4 py-2.5 text-[0.875rem] text-ink ring-1 ring-white/15 transition-colors hover:bg-white/15"
       >
         <IconBell className="size-4" /> Remind me
       </button>

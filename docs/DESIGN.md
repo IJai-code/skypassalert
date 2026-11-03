@@ -2,22 +2,32 @@
 
 How SkyPassAlert looks, sounds and behaves, and why. Every rule traces to something we observed or measured. Last reviewed 2026-10-24 (Phase 2).
 
-## 0. Current direction (2026-10-25, D-024)
-Ishaan supplied a reference: a polished astronomy app with deep teal-navy surfaces, rounded image cards, a cyan action colour, carousels and a bottom tab bar. SkyPassAlert now follows that product language:
-- **Four tabs:**
-  - **Tonight:** cards.
-  - **Sky:** live "find it" view.
-  - **Camera:** Sky Camera.
-  - **Passes:** the week.
-- **Colour roles:** cyan (`--action`) = things you tap; amber (`--station`) = the station and its path, nothing else.
-- **Cards** (20 px radius, subtle border, top-lit gradient) carry real content:
-  - The hero is tonight's pass drawn on the real sky.
-  - Pass thumbnails are each pass's own sky picture.
-  - Object cards use NASA public-domain photos (credited on the card).
-- **Typography:** Archivo bold for display and numbers; system face for body.
-- **Camera overlay is minimal** (`drawSky` style `clean`): thin rings on the Moon and planets, compass letters, and one cyan target tag. No constellation lines or star labels over the live image.
+## 0. Current direction: The Night (2026-11-02, D-029, D-030)
+**The page is the sky, and scrolling moves the clock.** It replaces the teal card stack (D-024), which kept our best asset, the real sky, in thumbnails.
 
-Sections 2–3 below record the earlier "departure board" phase; the honesty and data-first principles still apply, and the "no cards" rule is retired.
+<a id="the-night"></a>
+- **Tonight tab** (`src/ui/night/`):
+  - The real sky (`drawSky`) is pinned full-screen behind the page.
+  - **Stops:** each stop is a moment of the night, built by `buildNight()`: sunset, first stars, each pass, the Moon, planets at their best, sunrise.
+  - **Glide:** between stops the clock and the view direction ease; the sky colour comes from the Sun's real altitude.
+  - **Pass stops scrub the pass:** scrolling moves the station along its real path, and the minute marks pass by.
+  - **First screen is the answer** (3-second rule): the time, the station, one sentence and three actions (Find it, Remind me, Their view).
+  - **No-pass nights:** the headline is "No station tonight." and the next pass is a small tappable footnote, never a giant time for another day.
+  - **Time rail** (right edge): real times scaled to the night, a tick per stop, dashed bedtime, and a cyan marker for the moment you're looking at. Tapping a tick jumps to that stop.
+- **Wave Back** (`src/ui/wave/`): every pass flips to Earth seen from above the station at that minute, with real day/night, the ground track (amber when sunlit, dashed in shadow), its horizon ring, your town, and a computed sentence saying why you can see it. A wave card shares both views.
+- **Sky tab:** the live view, with a Find / Photograph switch (the old Camera tab).
+- **Week tab:** hairline rows like a departure board; each row's picture is that pass's own sky.
+
+**Layout rules:**
+- Words sit **below the horizon**, on dark ground: horizon at 46% of the height on stops and 36% on the answer.
+- Big Archivo times (`clamp(5rem, 26vw, 8rem)` on the answer).
+- Body 17 px; tracked caps only for eyebrows.
+- **No cards:** chrome is glass (`.glass`) pills.
+- **Colour:** near-black night tokens. Amber = the station only; cyan = things you tap. The night-vision red mode is unchanged.
+- **Faint passes** are labelled "low or faint" in words, not faded (fading failed contrast checks).
+- **Motion** comes only from scrolling, and only for real data.
+
+Sections 1–3 below record how we got here. The honesty and data-first principles still apply.
 
 ## 1. What we learned from looking at the field
 
@@ -68,6 +78,8 @@ These are recognizable tells of generated, templated UIs; several were in our ow
 **Type.** System fonts (SF Pro on Apple, Roboto on Android, PingFang/Noto for Chinese): zero bytes, native feel. Times use tabular figures (`.tnum`) so they line up like a departure board. One very large time per screen (`clamp(4rem, 19vw, 6.5rem)`). The small uppercase `.label` style is used only for section names.
 
 ## 5. Components
+> **Retired 2026-11-02 (D-029):** `CompassCard`, `SkyDome`, `TonightStrip`, `WeekBoard` and `AlsoTonight` were replaced by The Night (§0). Their jobs now live in the scroll's stops, the time rail and the Sky tab's heading tape. The list below is kept as history.
+
 - **Answer** (`src/ui/Answer.tsx`). States driven by `src/lib/state.ts`:
   - **tonight:** "Tonight in Fremont, CA" · big time · station name · one path sentence · cues (where to start relative to sunset, brightness and duration, why it fades).
   - **get-ready** (≤ 15 min): countdown, "head outside now", red-light offer.

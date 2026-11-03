@@ -27,7 +27,8 @@ export function Footer() {
       </p>
       <p className="mt-3 max-w-prose">
         Orbits: CelesTrak. Cities: © GeoNames (CC BY 4.0). Stars: Yale Bright Star Catalogue.
-        Compass: NOAA World Magnetic Model. Photos: NASA (public domain; no endorsement implied).
+        Compass: NOAA World Magnetic Model. Maps: Natural Earth. Photos: NASA (public domain; no
+        endorsement implied).
       </p>
       <p className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
         <a

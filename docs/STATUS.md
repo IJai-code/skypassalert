@@ -1,6 +1,6 @@
 # Status
 
-_Last updated: 2026-10-24, Sky View release (Phase 2.5) live at https://skypassalert.com._
+_Last updated: 2026-11-02, Phase 2.8 (The Night + Wave Back) in review._
 
 ## Done
 ### Phase 1: Foundation (merged)
@@ -79,10 +79,25 @@ Public repo, CI, the Pages deploy at https://skypassalert.com (HTTPS enforced, w
 - **Calendar:** "Add this week's best to my calendar" as one file.
 - **Numbers:** 223 tests; initial JS 105 KB; Lighthouse 97 / 100 / 100 / 100.
 
+### Phase 2.8: The Night + Wave Back (2026-11-02, PR in review)
+- **The Night:** the Tonight tab is one scroll through the night over the real sky.
+  - Pass stops scrub the station along its path.
+  - A time rail shows real times.
+  - On no-pass nights the headline is honest.
+  - Week rows open that night.
+- **Wave Back:** Earth from above the station at your minute.
+  - Real day/night, the ground track in sunlight or shadow, your town.
+  - A computed sentence says why you can see it.
+  - A share card made on the phone.
+  - Sub-points match Skyfield within 14 m (CI).
+- **Tabs:** 3 (Tonight, Sky with Find/Photograph, Week). Teal cards are retired for near-black night and glass chrome.
+- **Numbers:** 242 tests; initial JS 105.7 KB (budget 150); Wave Back is a 6.4 KB lazy chunk plus 17 KB of Earth data on first flip; Lighthouse 98 / 100 / 100 / 100.
+- **Needs a real phone:** scroll feel, the share sheet (iOS / Android / WeChat), and night mode outdoors.
+
 ## Next: Phase 3 (MVP v0.1)
 - ~~Place picker~~: done early (D-026).
 - Family mode settings (bedtime, kid wording); zh-Hans catalog for all copy.
-- Share card PNG with QR code; 14-day `.ics`.
+- ~~Share card PNG with QR code~~: done early as the wave card (D-030); 14-day `.ics`.
 - /privacy, /about, SEO basics; pre-rendered first paint for the default place.
 - Soft launch to about 10 families.
 

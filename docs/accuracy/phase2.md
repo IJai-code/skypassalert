@@ -11,6 +11,8 @@ frames, Sun, Moon, planets and pass finder.
 |---|---:|---:|---:|---:|---|
 | Satellite position (all geometry) | 4000 | 9.19 | 13.71 | 14.89 | m |
 | Satellite direction (when above horizon) | 102 | 1.17 | 2.79 | 4.71 | ″ |
+| Sub-satellite point | 4000 | 8.65 | 12.95 | 14.12 | m |
+| Station height | 4000 | 0.017 | 0.036 | 0.042 | m |
 | Rise/set time at 10° | 878 | 0.035 | 0.13 | 0.27 | s |
 | Sun direction | 1000 | 13.57 | 32.00 | 38.68 | ″ |
 | Sunset time | 300 | 0.75 | 2.17 | 2.91 | s |

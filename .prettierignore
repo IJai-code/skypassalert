@@ -3,3 +3,4 @@ coverage
 .lighthouseci
 package-lock.json
 *.md
+public/data/earth-110m.json

@@ -71,7 +71,7 @@ export function answerModel(
         eyebrow: state.next
           ? `Next good look: ${dayLabel(state.next.start.unixMs, nowMs, tz)}`
           : 'Nothing this week',
-        headline: 'No space station passes tonight.',
+        headline: 'No station tonight.',
         sub: 'The stations come in runs of a week or two. Here’s the next one.',
       }
   }

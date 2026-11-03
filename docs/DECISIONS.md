@@ -186,3 +186,34 @@ Node 22.18+ strips TypeScript types natively. Labs (`scripts/labs/*.ts`) import 
   - Most importantly, it says when the chosen target is there but hidden.
 - **Why not ML:** size, opacity and speed. This is explainable, offline and private (frames never leave the phone).
 - **Learn:** `docs/learn/13-sky-check.md`.
+
+## D-029 The Tonight tab becomes one scroll through the night (2026-11-02)
+- **Context:** Ishaan asked for a drastically better UI, free to look very different. The card stack repeated one shape everywhere, kept the sky (our best asset) in thumbnails, and on nights without a good pass led with "No space station passes tonight." above a giant time for tomorrow.
+- **Choice:**
+  - The real sky (`drawSky`) is pinned full-screen behind the page. Scrolling moves the clock: sunset → first stars → each pass → the Moon → planets at their best → sunrise (`src/ui/night/`).
+  - A pass stop scrubs the pass: the station moves along its real path as you scroll.
+  - Words sit on the dark ground under the horizon, in large type, with no cards. A time rail on the right edge shows real times and jumps to any stop.
+  - On a night with no worthwhile pass, the headline is "No station tonight." and the next pass is a small, tappable footnote.
+  - Tapping a pass in Week opens *that* night's scroll.
+  - Four tabs become three: Tonight, Sky (Find / Photograph switch, merging the old Camera tab) and Week (rows, not cards).
+  - Teal tokens give way to near-black night with glass chrome. Amber still means only the station, and cyan only things you tap.
+- **Cost:** a scene per minute plus one canvas paint per frame. We measured ~0.2 ms per frame (median), so scrolling has headroom on phones.
+
+## D-030 Wave Back: the station's view of you (2026-11-02)
+- **Context:** Ishaan asked for a feature no other app has. On 2026-11-02 we checked the field:
+  - Pass times, AR views and alerts: Sat Seeker, ISSINFO, Spot the Station, ISS Detector.
+  - Transit finding: transit-finder.com, issinfo.net.
+  - We found no pass app that shows the pass from the station's side.
+- **Choice:** every pass flips to Earth seen from above the station at the same minute.
+  - **Projection:** vertical-perspective (Snyder §23) from ~2,600 km up.
+  - **Day and night:** shaded from the real subsolar point.
+  - **Track:** the station's ground track, amber where sunlit and dashed in shadow.
+  - **Markers:** its horizon ring, your town, and the line of sight between them.
+  - **Words:** a computed sentence explains why you can see it: it is still in sunlight while you stand in the dark.
+  - **Share:** a 1080×1350 "wave card" (your sky above, their view below) is made on the phone and shared with the share sheet.
+- **Data:**
+  - Natural Earth 1:110m land and marine polygons (public domain), simplified to 17 KB gzipped and fetched only on the first flip.
+  - Sub-points are computed in the forecast worker (30 s samples, ±10 min around each pass).
+  - Checked against Skyfield `wgs84.subpoint_of` in CI: max 14 m.
+- **Claims:** per MARKET.md rules, public copy will not say "only" or "first"; we describe what it does.
+- **Learn:** `docs/learn/14-wave-back.md`.

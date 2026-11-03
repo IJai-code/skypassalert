@@ -37,6 +37,8 @@ export default tseslint.config(
       'src/engine/sky/scene.ts',
       'src/sky/drawSky.ts',
       'src/photo/*.ts',
+      'src/ui/night/scrollSky.ts',
+      'src/ui/wave/*.ts',
     ],
     rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
   },
