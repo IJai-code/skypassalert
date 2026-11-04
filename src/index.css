@@ -1,36 +1,68 @@
 @import 'tailwindcss';
 
-/* Archivo (SIL OFL 1.1, public/fonts/Archivo-OFL.txt), cut down to Latin,
-   weights 500–800 and widths 62–100%. Used for instrument readouts: times,
-   bearings, labels. Body copy stays in the system face for legibility. */
+/* The almanac's two typefaces (D-031), both SIL OFL 1.1 (public/fonts/*-OFL.txt),
+   cut down to Latin. Instrument Serif sets times and headlines; IBM Plex Mono
+   sets figures, tables and labels. Body copy stays in the system face: zero
+   bytes, and it carries PingFang / Noto for Chinese. */
 @font-face {
-  font-family: 'Archivo';
-  src: url('/fonts/archivo-var.woff2') format('woff2');
-  font-weight: 500 800;
-  font-stretch: 62% 100%;
+  font-family: 'Instrument Serif';
+  src: url('/fonts/instrument-serif.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
   font-display: swap;
+}
+@font-face {
+  font-family: 'Instrument Serif';
+  src: url('/fonts/instrument-serif-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Plex Mono';
+  src: url('/fonts/plex-mono-400.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Plex Mono';
+  src: url('/fonts/plex-mono-500.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+/* Metric-matched fallbacks so the swap doesn't shift the layout (CLS 0). */
+@font-face {
+  font-family: 'Serif Fallback';
+  src: local('Times New Roman'), local('Times'), local('Georgia');
+  size-adjust: 92%;
+}
+@font-face {
+  font-family: 'Mono Fallback';
+  src: local('Menlo'), local('Courier New');
+  size-adjust: 100%;
 }
 
 /*
  * Design tokens. Rules live in docs/DESIGN.md; the short version:
- * - Amber means "the station" and nothing else.
- * - Hierarchy comes from size and weight; color is for meaning.
+ * - A printed almanac at night: cream ink on blue-black paper, hairline rules.
+ * - Amber means "the station" (and the link that finds it), nothing else.
+ * - Hierarchy comes from type, not boxes. No pills, glass, shadows or blur.
  * - Night mode swaps everything to dim red to protect dark-adapted eyes.
  */
 :root {
-  /* The night itself (D-029): the page is the sky, chrome is glass over it. */
-  --night: #03050b;
-  --night-2: #080c17;
-  --surface: #0b101c;
-  --surface-2: #111827;
-  --hair: rgb(170 190 230 / 0.12);
-  --hair-strong: rgb(170 190 230 / 0.24);
-  --ink: #eef1f7;
-  --ink-2: #aab3c7;
-  --ink-3: #737d95;
-  /* Cyan = things you can tap. Amber = the station, and only the station. */
-  --action: #40c9d9;
-  --action-ink: #03161c;
+  --night: #0d1118;
+  --night-2: #121722;
+  --surface: #121722;
+  --surface-2: #171d2a;
+  --rule: #2a2f39;
+  --hair: #2a2f39;
+  --hair-strong: rgb(233 228 214 / 0.55);
+  --ink: #e9e4d6;
+  --ink-2: #b6b1a3;
+  --ink-3: #908b7d;
+  /* Links are ink; the one that leads to the station is amber. */
+  --action: #e9e4d6;
+  --action-ink: #0d1118;
   --station: #ffc65c;
   --station-soft: rgb(255 198 92 / 0.28);
   --sky-day: #2f5f86;
@@ -45,11 +77,12 @@
 :root[data-mode='night'] {
   --night: #000;
   --night-2: #0a0000;
-  --hair: rgb(170 30 20 / 0.28);
-  --hair-strong: rgb(170 30 20 / 0.5);
+  --rule: #3a0b07;
+  --hair: #3a0b07;
+  --hair-strong: rgb(199 54 43 / 0.6);
   --ink: #c7362b;
-  --ink-2: #92241c;
-  --ink-3: #651812;
+  --ink-2: #a12a21;
+  --ink-3: #87231b;
   --station: #ff3b2e;
   --station-soft: rgb(255 59 46 / 0.3);
   --sky-day: #3a0a07;
@@ -65,6 +98,7 @@
 @theme inline {
   --color-night: var(--night);
   --color-night-2: var(--night-2);
+  --color-rule: var(--rule);
   --color-hair: var(--hair);
   --color-hair-strong: var(--hair-strong);
   --color-ink: var(--ink);
@@ -82,8 +116,9 @@
   --font-sans:
     system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC',
     'Hiragino Sans GB', 'Noto Sans CJK SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  --font-serif: 'Instrument Serif', 'Serif Fallback', Georgia, serif;
+  --font-mono: 'Plex Mono', 'Mono Fallback', ui-monospace, Menlo, monospace;
   --breakpoint-wide: 64rem;
-  --font-hud: 'Archivo', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
 @layer base {
@@ -105,9 +140,8 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--ink);
+    outline: 1px solid var(--ink);
     outline-offset: 3px;
-    border-radius: 3px;
   }
 
   button {
@@ -116,51 +150,39 @@
 }
 
 @layer utilities {
-  /* Instrument voice: condensed, tabular, tight. Times, bearings, readouts. */
-  .hud {
-    font-family: var(--font-hud);
-    font-stretch: 72%;
-    font-variant-numeric: tabular-nums lining-nums;
-    letter-spacing: 0.01em;
+  /* Display voice: times and headlines. */
+  .serif {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    letter-spacing: -0.01em;
   }
-  .hud-caps {
-    font-family: var(--font-hud);
-    font-stretch: 80%;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
+  .serif-i {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+  }
+  /* Table voice: figures, times in lists, coordinates, small labels. */
+  .mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+  .mono-caps {
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
-  /* Display headings: Archivo at normal width, heavy. */
-  .display {
-    font-family: var(--font-hud);
-    font-stretch: 100%;
-    font-weight: 700;
-    letter-spacing: -0.015em;
+  /* Every action is a word with a hairline under it. */
+  .link {
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.3em;
   }
-  .card {
-    background: linear-gradient(180deg, var(--surface-2), var(--surface));
-    border: 1px solid var(--hair);
-    border-radius: 20px;
+  .link:hover {
+    text-decoration-thickness: 2px;
   }
-  /* Frosted panel over the live sky. */
-  .glass {
-    background: color-mix(in srgb, var(--night) 78%, transparent);
-    backdrop-filter: blur(18px) saturate(1.2);
-    -webkit-backdrop-filter: blur(18px) saturate(1.2);
-  }
-
-  /* Times line up in columns, like a departure board. */
   .tnum {
     font-variant-numeric: tabular-nums;
-  }
-
-  /* Small label voice, used sparingly: section names only. */
-  .label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
-    color: var(--ink-3);
   }
 }

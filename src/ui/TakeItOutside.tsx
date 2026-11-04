@@ -2,10 +2,7 @@
 // Hand the page to a phone with one scan.
 export function TakeItOutside() {
   return (
-    <aside
-      aria-labelledby="outside"
-      className="hidden rounded-lg border border-hair p-5 wide:block"
-    >
+    <aside aria-labelledby="outside" className="hidden border-y border-rule py-5 wide:block">
       <div className="flex items-center gap-5">
         <img
           src="/qr.svg"
@@ -15,7 +12,7 @@ export function TakeItOutside() {
           className="rounded-sm"
         />
         <div>
-          <h2 id="outside" className="text-lg font-semibold">
+          <h2 id="outside" className="serif text-[1.5rem]">
             Take it outside
           </h2>
           <p className="mt-1 text-ink-2">

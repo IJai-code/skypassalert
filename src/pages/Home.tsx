@@ -11,15 +11,16 @@ import { loadSavedPlace, savePlace } from '../lib/places.ts'
 import { answerModel } from '../ui/Answer.tsx'
 import { SkyStage } from '../ui/SkyStage.tsx'
 import { TabBar, type Tab } from '../ui/app/TabBar.tsx'
-import { NightScroll } from '../ui/night/NightScroll.tsx'
+import { AlmanacPage } from '../ui/night/AlmanacPage.tsx'
 import { PassesScreen } from '../ui/app/PassesScreen.tsx'
 import { PlacePicker } from '../ui/app/PlacePicker.tsx'
 import { useStarCatalog } from '../sky/useStarCatalog.ts'
 import { requestMotionPermission } from '../sky/useOrientation.ts'
 
 const NO_PASSES: never[] = []
-const TAB_BAR_PX = 88
-const SWITCH_PX = 52
+// Heights of the ruled tab bar and the Find / Photograph switch above it.
+const TAB_BAR_PX = 49
+const SWITCH_PX = 42
 
 export function Home() {
   const [place, setPlaceState] = useState<Place>(loadSavedPlace)
@@ -82,7 +83,7 @@ export function Home() {
 
       {tab === 'tonight' &&
         (ready && model ? (
-          <NightScroll
+          <AlmanacPage
             forecast={ready}
             model={model}
             place={place}
@@ -110,7 +111,6 @@ export function Home() {
         <PassesScreen
           forecast={ready}
           place={place}
-          catalog={catalog}
           nowMs={now}
           onOpen={(p) => {
             setFocus(p)
@@ -129,22 +129,30 @@ export function Home() {
 
 function Loading({ placeName, error }: { placeName: string; error: string | null }) {
   return (
+    // The same shapes as the almanac page, so nothing jumps when it arrives.
     <main
-      className="flex min-h-[100svh] flex-col justify-end bg-[linear-gradient(to_bottom,#05070f,#0b1428_58%,#05070f_60%)] pr-14 pl-5 pb-[calc(env(safe-area-inset-bottom)+7rem)]"
+      className="mx-auto max-w-[36rem] px-5 pt-[max(env(safe-area-inset-top),14px)] pb-28"
       aria-busy={!error}
     >
+      <p className="mono border-b border-ink pb-1.5 text-[0.75rem] text-ink uppercase">
+        {placeName}
+      </p>
       {error ? (
         <>
-          <h1 className="display text-xl">We couldn’t load the orbit data.</h1>
+          <h1 className="serif mt-10 text-[2rem] leading-tight">
+            We couldn’t load the orbit data.
+          </h1>
           <p className="mt-2 text-ink-2">Check your connection and reload. ({error})</p>
         </>
       ) : (
         <>
-          <p className="hud-caps text-ink-2">Tonight in {placeName}</p>
-          <p className="display tnum mt-4 text-[clamp(5.5rem,30vw,9rem)] leading-[0.86] tracking-[-0.045em] text-ink-3/40">
+          <p className="mono-caps mt-11 text-ink-2">Tonight in {placeName}</p>
+          <p className="serif tnum mt-2 -ml-1 text-[clamp(6rem,35vw,9rem)] leading-[0.82] text-ink-3">
             –:––
           </p>
-          <p className="mt-3 text-ink-3">Working out where the stations will be…</p>
+          <p className="serif-i mt-4 text-[1.5rem] text-ink-3">
+            Working out where the stations will be…
+          </p>
         </>
       )}
     </main>
@@ -163,7 +171,7 @@ function useNightMode(): [boolean, (on: boolean) => void] {
     document.documentElement.dataset.mode = on ? 'night' : ''
     document
       .querySelector('meta[name="theme-color"]')
-      ?.setAttribute('content', on ? '#000000' : '#061219')
+      ?.setAttribute('content', on ? '#000000' : '#0d1118')
     try {
       sessionStorage.setItem('spa:night', on ? '1' : '0')
     } catch {
@@ -184,8 +192,8 @@ function SkySwitch({
     <div
       role="tablist"
       aria-label="Sky view"
-      className="glass fixed left-1/2 z-40 flex -translate-x-1/2 gap-1 rounded-full p-1 ring-1 ring-white/10"
-      style={{ bottom: `calc(max(env(safe-area-inset-bottom), 12px) + ${TAB_BAR_PX - 12}px)` }}
+      className="fixed inset-x-0 z-40 flex justify-center gap-8 border-t border-rule bg-night py-2.5"
+      style={{ bottom: `calc(env(safe-area-inset-bottom) + ${TAB_BAR_PX}px)` }}
     >
       {(
         [
@@ -199,7 +207,7 @@ function SkySwitch({
           type="button"
           aria-selected={mode === id}
           onClick={() => onMode(id)}
-          className={`rounded-full px-4 py-1.5 text-[0.8125rem] font-semibold ${mode === id ? 'bg-white/15 text-ink' : 'text-ink-2'}`}
+          className={`mono-caps px-1 py-1 text-[0.75rem] ${mode === id ? 'link text-ink' : 'text-ink-3'}`}
         >
           {label}
         </button>
