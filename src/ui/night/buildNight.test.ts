@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { buildNight, pickNight, stopSpan } from './buildNight.ts'
+import { bestOtherThing, buildNight, pickNight, stopSpan, type Night } from './buildNight.ts'
 import { forecast } from '../../engine/predict.ts'
 import type { OmmElements } from '../../engine/index.ts'
 import elements from '../../engine/__fixtures__/stations-2026-10-24.json'
@@ -64,5 +64,42 @@ describe('the night as stops (Fremont, 2026-10-24)', () => {
     expect(dst.night.evening.dateKey).toBe('2026-10-31')
     expect(dst.endMs - dst.startMs).toBeGreaterThan(12 * 3_600_000)
     expect(dst.endMs - dst.startMs).toBeLessThan(16 * 3_600_000)
+  })
+})
+
+describe('family and extras', () => {
+  const t = Date.parse('2026-10-24T20:00:00Z')
+
+  it('marks evening passes after bedtime, never pre-dawn ones', () => {
+    const n = buildNight(f, t, undefined, '19:00')!
+    const passes = n.stops.filter((s) => s.kind === 'pass')
+    const tiangong = passes.find((s) => s.kind === 'pass' && !s.dawn)
+    const dawn = passes.find((s) => s.kind === 'pass' && s.dawn)
+    expect(tiangong?.kind === 'pass' && tiangong.late).toBe(true)
+    expect(dawn?.kind === 'pass' && dawn.late).toBe(false)
+  })
+
+  it('adds a meteor line on a shower night (Southern Taurids, 2 Nov)', () => {
+    const f15 = forecast({
+      place: FREMONT,
+      elements: elements as OmmElements[],
+      fromMs: f.fromMs,
+      days: 15,
+    })
+    const n = buildNight(f15, Date.parse('2026-11-02T20:00:00Z'))!
+    const m = n.stops.find((s) => s.kind === 'meteor')
+    expect(m?.kind === 'meteor' && m.shower.id).toBe('STA')
+  })
+
+  it('picks the best other thing: Moon, then the brightest planet, then a shower', () => {
+    const n = buildNight(f, t)!
+    expect(bestOtherThing(n)?.kind).toBe('moon')
+    const noMoon: Night = { ...n, stops: n.stops.filter((s) => s.kind !== 'moon') }
+    expect(bestOtherThing(noMoon)?.kind).toBe('planet')
+    const quiet: Night = {
+      ...n,
+      stops: n.stops.filter((s) => s.kind !== 'moon' && s.kind !== 'planet'),
+    }
+    expect(bestOtherThing(quiet)).toBeNull()
   })
 })

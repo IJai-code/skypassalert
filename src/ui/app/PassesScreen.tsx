@@ -9,10 +9,10 @@ import { WORTH_IT } from '../../lib/state.ts'
 import { passKey } from '../night/buildNight.ts'
 import { PassChart, chartLabel } from '../night/PassChart.tsx'
 import { dayLabel, formatDate, formatTime } from '../../lib/format.ts'
-import { buildIcs } from '../../lib/ics.ts'
 import { compass8 } from '../../engine/describe/describe.ts'
-import { fistsLabel, minutesLabel, pathSentence, stationName } from '../../copy/en.ts'
-import { detectInAppBrowser } from '../../lib/env.ts'
+import { fistsLabel, minutesLabel, stationName } from '../../copy/en.ts'
+import { isAfterBedtime } from '../../lib/settings.ts'
+import { TwoWeeksLink } from '../CalendarButton.tsx'
 
 type Filter = 'evening' | 'dawn' | 'all'
 
@@ -20,16 +20,21 @@ export function PassesScreen({
   forecast,
   place,
   nowMs,
+  bedtime,
   onOpen,
 }: {
   forecast: Forecast
   place: Place
   nowMs: number
+  bedtime: string | null
   onOpen: (p: ForecastPass) => void
 }) {
   const [filter, setFilter] = useState<Filter>('evening')
   const tz = place.timeZone
-  const upcoming = forecast.passes.filter((p) => p.end.unixMs > nowMs)
+  // The forecast runs two weeks for the calendar; this tab is the next 8 days.
+  const upcoming = forecast.passes.filter(
+    (p) => p.end.unixMs > nowMs && p.start.unixMs < nowMs + 8 * 86_400_000,
+  )
   const shown = upcoming.filter((p) =>
     filter === 'all'
       ? true
@@ -37,37 +42,6 @@ export function PassesScreen({
         ? passPeriod(p, tz) === 'before-dawn'
         : passPeriod(p, tz) !== 'before-dawn',
   )
-
-  // All the worthwhile evening passes in one calendar file.
-  const addAll = () => {
-    const good = upcoming.filter(
-      (p) => passPeriod(p, tz) !== 'before-dawn' && passScore(p) >= WORTH_IT,
-    )
-    if (!good.length || detectInAppBrowser()) return
-    const events = good.map((p) =>
-      buildIcs({
-        uid: `${p.noradId}-${Math.round(p.start.unixMs / 1000)}@skypassalert.com`,
-        startMs: p.start.unixMs,
-        endMs: p.end.unixMs,
-        title: `${stationName(p.noradId).short} over ${place.name}: look ${compass8(p.start.azDeg)}`,
-        description: `${pathSentence(p)} https://skypassalert.com/?s=ics`,
-        location: place.name,
-        url: 'https://skypassalert.com/?s=ics',
-        alarmMinutesBefore: 10,
-      }),
-    )
-    // Merge the VEVENT blocks into one calendar.
-    const body = events
-      .map((e) => e.slice(e.indexOf('BEGIN:VEVENT'), e.indexOf('END:VCALENDAR')))
-      .join('')
-    const first = events[0] ?? ''
-    const ics = first.slice(0, first.indexOf('BEGIN:VEVENT')) + body + 'END:VCALENDAR\r\n'
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }))
-    a.download = 'skypassalert-this-week.ics'
-    a.click()
-    setTimeout(() => URL.revokeObjectURL(a.href), 10_000)
-  }
 
   // One heading per day, in the place's own calendar.
   const days: Array<{ key: string; label: string; passes: ForecastPass[] }> = []
@@ -124,6 +98,10 @@ export function PassesScreen({
                   pass={p}
                   place={place}
                   weak={passScore(p) < WORTH_IT}
+                  late={
+                    passPeriod(p, tz) !== 'before-dawn' &&
+                    isAfterBedtime(p.start.unixMs, tz, bedtime)
+                  }
                   onOpen={() => onOpen(p)}
                 />
               </li>
@@ -135,9 +113,15 @@ export function PassesScreen({
         <p className="mt-7 border-y border-rule py-4 text-ink-2">No passes in this window.</p>
       )}
 
-      <button type="button" onClick={addAll} className="link mt-6 text-[1rem]">
-        Add this week’s best evenings to my calendar
-      </button>
+      <div className="mt-6">
+        <TwoWeeksLink
+          passes={forecast.passes}
+          placeName={place.name}
+          timeZone={tz}
+          bedtime={bedtime}
+          nowMs={nowMs}
+        />
+      </div>
       <p className="mt-3 text-[0.8125rem] text-ink-3">
         Lines marked “low or faint” are listed for completeness, not worth a special trip.
       </p>
@@ -149,11 +133,13 @@ export function PassRow({
   pass,
   place,
   weak = false,
+  late = false,
   onOpen,
 }: {
   pass: ForecastPass
   place: Place
   weak?: boolean
+  late?: boolean
   onOpen: () => void
 }) {
   const tz = place.timeZone
@@ -176,7 +162,11 @@ export function PassRow({
       <span className="min-w-0">
         <span className="block text-station">
           {stationName(pass.noradId).short}
-          {weak && <span className="serif-i text-ink-3"> low or faint</span>}
+          {late ? (
+            <span className="serif-i text-ink-3"> after bedtime</span>
+          ) : (
+            weak && <span className="serif-i text-ink-3"> low or faint</span>
+          )}
         </span>
         <span className="mono block text-[0.6875rem] text-ink-3" aria-label={chartLabel(pass)}>
           {fistsLabel(pass.peak.elDeg)} up · {compass8(pass.start.azDeg)}→{compass8(pass.end.azDeg)}{' '}

@@ -21,6 +21,8 @@ Every third-party asset, dataset or library that ships to users, or that our dat
 | Fremont coordinates | `src/presets.ts` | GeoNames (geonameId 5350734) | CC BY 4.0 | Footer + place picker |
 | City search list | `public/data/cities.json` (built by `scripts/build-cities.mjs` from cities15000 + admin1CodesASCII) | GeoNames, https://download.geonames.org/export/dump/ | CC BY 4.0 | “City data © GeoNames (CC BY 4.0)” in the place picker and footer |
 | Earth outlines and sea names | `public/data/earth-110m.json` (built by `scripts/build-earth.mjs` from `ne_110m_land` + `ne_110m_geography_marine_polys`, v5.1.2) | Natural Earth, https://www.naturalearthdata.com/ (via https://github.com/nvkelso/natural-earth-vector) | Public domain | Not required; credited in the footer and docs/learn/14-wave-back.md |
+| Meteor shower table | `src/engine/meteors/showers.ts` (12 major showers: active dates, peak solar longitude, ZHR, radiant, speed) | International Meteor Organization, Meteor Shower Calendar, working list of visual meteor showers, https://www.imo.net/ | Facts (dates and figures), cited | "Meteor showers: IMO" in the footer and on /about |
+| Link preview image | `public/og.png` (rendered by `scripts/render-og.mjs`) | Original SVG; set in Instrument Serif and IBM Plex Mono (OFL, above) | MIT (this repo); fonts OFL | n/a |
 
 ## Planned (not yet shipped)
 | Asset | Phase | Source | License / terms | Attribution required |

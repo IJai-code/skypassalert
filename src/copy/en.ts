@@ -52,7 +52,16 @@ const BRIGHTNESS: Record<BrightnessWord, string> = {
   easy: 'Easy to spot away from streetlights.',
   faint: 'Faint. You’ll want a dark spot.',
 }
-export const brightnessSentence = (mag: number) => BRIGHTNESS[brightnessWord(mag)]
+const BRIGHTNESS_SIMPLE: Record<BrightnessWord, string> = {
+  dazzling: 'Super bright: brighter than every star.',
+  'very-bright': 'Brighter than any star.',
+  bright: 'As bright as the brightest stars.',
+  easy: 'Easy to see if it’s dark around you.',
+  faint: 'Hard to see. Find a dark spot.',
+}
+/** `simple`: the family "simple words" register (same facts, shorter words). */
+export const brightnessSentence = (mag: number, simple = false) =>
+  (simple ? BRIGHTNESS_SIMPLE : BRIGHTNESS)[brightnessWord(mag)]
 
 export const fistsLabel = (elDeg: number) => {
   const n = fists(elDeg)
@@ -60,7 +69,8 @@ export const fistsLabel = (elDeg: number) => {
 }
 
 /** "Rises low in the west-southwest and climbs almost straight overhead." */
-export function pathSentence(p: VisiblePass): string {
+export function pathSentence(p: VisiblePass, simple = false): string {
+  if (simple) return pathSentenceSimple(p)
   const startDir = direction(p.start.azDeg)
   const start =
     p.start.reason === 'leaves-shadow'
@@ -88,10 +98,54 @@ export function pathSentence(p: VisiblePass): string {
   return `${start}, ${climb} and sets in the ${direction(p.end.azDeg)}.`
 }
 
+/** "It comes up low in the west, goes almost right over your head, then disappears." */
+function pathSentenceSimple(p: VisiblePass): string {
+  const startDir = direction(p.start.azDeg)
+  const start =
+    p.start.reason === 'leaves-shadow'
+      ? `It pops out of nowhere ${fistsLabel(p.start.elDeg)} up in the ${startDir}`
+      : p.start.reason === 'sky-darkens' || p.start.reason === 'window-start'
+        ? `It’s already up in the ${startDir}`
+        : `It comes up low in the ${startDir}`
+  const peakDir = direction(p.peak.azDeg)
+  const climb = {
+    overhead: 'goes right over your head',
+    'almost-overhead': 'goes almost right over your head',
+    high: `goes up high in the ${peakDir}`,
+    'partway-up': `goes halfway up the ${peakDir} sky`,
+    low: `stays low in the ${peakDir}`,
+  }[heightWord(p.peak.elDeg)]
+  if (p.end.reason === 'enters-shadow') {
+    return `${start}, ${climb}, then disappears into Earth’s shadow.`
+  }
+  return `${start}, ${climb} and goes down in the ${direction(p.end.azDeg)}.`
+}
+
 /** How to find the starting point, anchored to sunset when that helps. */
-export function startCue(p: VisiblePass, sunsetAzDeg: number | null, isEvening: boolean): string {
+export function startCue(
+  p: VisiblePass,
+  sunsetAzDeg: number | null,
+  isEvening: boolean,
+  simple = false,
+): string {
   const cue = isEvening ? sunsetCue(p.start.azDeg, sunsetAzDeg) : ({ kind: 'none' } as const)
   const dir = direction(p.start.azDeg)
+  if (simple) {
+    switch (cue.kind) {
+      case 'at-sunset':
+        return 'Look where the sun went down.'
+      case 'left-of-sunset':
+      case 'right-of-sunset': {
+        const n = Math.max(1, cue.fists)
+        const side = cue.kind === 'left-of-sunset' ? 'left' : 'right'
+        return `Look where the sun went down, then ${n === 1 ? 'one fist' : `${n} fists`} to the ${side}.`
+      }
+      case 'opposite-sunset':
+        return 'Turn your back to where the sun went down.'
+      default:
+        return `Look ${dir}.`
+    }
+  }
   switch (cue.kind) {
     case 'at-sunset':
       return 'Look where the sun went down. It starts right there.'
@@ -108,8 +162,10 @@ export function startCue(p: VisiblePass, sunsetAzDeg: number | null, isEvening: 
   }
 }
 
-export function endNote(p: VisiblePass): string | null {
+export function endNote(p: VisiblePass, simple = false): string | null {
   if (p.end.reason !== 'enters-shadow') return null
+  if (simple)
+    return 'It doesn’t set. It fades away like a light turning off: that’s Earth’s shadow.'
   return `It won’t set: it fades out ${fistsLabel(p.end.elDeg)} up as it slips into Earth’s shadow. That’s normal.`
 }
 
@@ -157,3 +213,35 @@ export const NIGHT_COPY = {
   dawnPass: 'Before dawn, for early risers.',
   weakPass: 'Low or faint: listed so you know, not worth a special trip.',
 }
+
+// ── Meteor showers (docs/learn/15-meteors.md) ────────────────────────────
+
+/** "peak tonight", "2 days to peak", "1 day after peak". */
+export function meteorPeakLabel(peakInDays: number): string {
+  if (peakInDays === 0) return 'peak tonight'
+  if (peakInDays === 1) return 'peak tomorrow'
+  const n = Math.abs(peakInDays)
+  const days = `${n} day${n === 1 ? '' : 's'}`
+  return peakInDays > 0 ? `${days} to peak` : `${days} after peak`
+}
+
+export const meteorRate = (low: number, high: number) => `${low}–${high}/h`
+
+export function meteorSentence(s: {
+  rateLow: number
+  rateHigh: number
+  radiantAzDeg: number
+  radiantElDeg: number
+  moonIllumination: number
+  moonUp: boolean
+}): string {
+  const where = whereInSky(s.radiantAzDeg, s.radiantElDeg)
+  const moon =
+    s.moonUp && s.moonIllumination > 0.5 ? ' The bright Moon will hide the fainter ones.' : ''
+  return `Maybe ${s.rateLow} to ${s.rateHigh} an hour from a dark spot, far fewer under town lights. They streak out from the ${where}: look anywhere around there, not straight at it, and give your eyes 20 minutes to adjust.${moon}`
+}
+
+export const METEOR_NOTE =
+  'Meteor rates are rough: showers change from year to year and come in bursts. Lie back and be patient.'
+
+export const AFTER_BEDTIME = 'after bedtime'

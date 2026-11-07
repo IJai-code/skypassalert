@@ -1,5 +1,5 @@
 // One night as a list of stops in time order: sunset, first stars, every
-// visible pass, the Moon, the planets at their best, sunrise. The Tonight tab
+// visible pass, the Moon, the planets at their best, a meteor shower, sunrise. The Tonight tab
 // sets them as a ruled table, one line per stop.
 // Docs: docs/DESIGN.md#almanac
 import type {
@@ -8,9 +8,11 @@ import type {
   MoonInfo,
   NightSky,
   PlanetSighting,
+  ShowerTonight,
 } from '../../engine/index.ts'
 import { passPeriod, passScore } from '../../engine/sky/schedule.ts'
 import { WORTH_IT } from '../../lib/state.ts'
+import { isAfterBedtime } from '../../lib/settings.ts'
 import { postcardView } from '../stageView.ts'
 
 export type Face = { azDeg: number; elDeg: number }
@@ -28,9 +30,12 @@ export type Stop =
       dawn: boolean
       /** Low or faint: listed, not worth a special trip. */
       weak: boolean
+      /** An evening pass after the family's bedtime. */
+      late: boolean
     }
   | { kind: 'moon'; id: string; atMs: number; face: Face; moon: MoonInfo }
   | { kind: 'planet'; id: string; atMs: number; face: Face; planet: PlanetSighting }
+  | { kind: 'meteor'; id: string; atMs: number; face: Face; shower: ShowerTonight }
   | { kind: 'sunrise'; id: string; atMs: number; face: Face }
 
 export type Night = {
@@ -61,7 +66,12 @@ function noonAfter(n: NightSky): number {
   return (n.evening.sunsetMs ?? n.evening.civilDuskMs ?? 0) + 14 * HOUR
 }
 
-export function buildNight(forecast: Forecast, nowMs: number, anchorMs?: number): Night | null {
+export function buildNight(
+  forecast: Forecast,
+  nowMs: number,
+  anchorMs?: number,
+  bedtime: string | null = null,
+): Night | null {
   const night = pickNight(forecast, nowMs, anchorMs)
   if (!night) return null
   const ev = night.evening
@@ -94,14 +104,16 @@ export function buildNight(forecast: Forecast, nowMs: number, anchorMs?: number)
 
   for (const p of forecast.passes) {
     if (!within(p.start.unixMs) && !within(p.end.unixMs)) continue
+    const dawn = passPeriod(p, tz) === 'before-dawn'
     stops.push({
       kind: 'pass',
       id: passKey(p),
       atMs: p.start.unixMs,
       face: { azDeg: postcardView(p).az, elDeg: 18 },
       pass: p,
-      dawn: passPeriod(p, tz) === 'before-dawn',
+      dawn,
       weak: passScore(p) < WORTH_IT,
+      late: !dawn && isAfterBedtime(p.start.unixMs, tz, bedtime),
     })
   }
 
@@ -127,6 +139,17 @@ export function buildNight(forecast: Forecast, nowMs: number, anchorMs?: number)
     })
   }
 
+  // One shower line at most: the best one tonight (Taurids often overlap).
+  const shower = night.meteors[0]
+  if (shower && within(shower.bestMs))
+    stops.push({
+      kind: 'meteor',
+      id: `meteor-${shower.id}`,
+      atMs: shower.bestMs,
+      face: { azDeg: shower.radiantAzDeg, elDeg: Math.min(60, shower.radiantElDeg) },
+      shower,
+    })
+
   if (ev.sunriseMs !== null)
     stops.push({
       kind: 'sunrise',
@@ -145,4 +168,29 @@ export function buildNight(forecast: Forecast, nowMs: number, anchorMs?: number)
  */
 export function stopSpan(s: Stop): [number, number] {
   return s.kind === 'pass' ? [s.pass.start.unixMs, s.pass.end.unixMs] : [s.atMs, s.atMs]
+}
+
+export type OtherThing =
+  | { kind: 'moon'; stop: Extract<Stop, { kind: 'moon' }> }
+  | { kind: 'planet'; stop: Extract<Stop, { kind: 'planet' }> }
+  | { kind: 'meteor'; stop: Extract<Stop, { kind: 'meteor' }> }
+
+/**
+ * On a night without a good pass, the one thing most worth stepping out for:
+ * a Moon that's more than a sliver, else the brightest planet, else a shower.
+ * Null on a truly quiet night.
+ */
+export function bestOtherThing(night: Night): OtherThing | null {
+  const moon = night.stops.find(
+    (s): s is Extract<Stop, { kind: 'moon' }> => s.kind === 'moon' && s.moon.illumination > 0.15,
+  )
+  if (moon) return { kind: 'moon', stop: moon }
+  const planet = night.stops
+    .filter((s): s is Extract<Stop, { kind: 'planet' }> => s.kind === 'planet')
+    .sort((a, b) => a.planet.magnitude - b.planet.magnitude)[0]
+  if (planet) return { kind: 'planet', stop: planet }
+  const meteor = night.stops.find(
+    (s): s is Extract<Stop, { kind: 'meteor' }> => s.kind === 'meteor',
+  )
+  return meteor ? { kind: 'meteor', stop: meteor } : null
 }
