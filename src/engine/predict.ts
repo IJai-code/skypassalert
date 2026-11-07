@@ -8,6 +8,7 @@ import type { Place } from './place.ts'
 import { eveningFor, type Evening } from './sky/sunEvents.ts'
 import { moonAt, planetsVisible, type MoonInfo, type PlanetSighting } from './sky/tonight.ts'
 import { stationView, type StationView } from './sky/subpoint.ts'
+import { showersTonight, type ShowerTonight } from './meteors/meteors.ts'
 import { addDays, localDateKey, parseDateKey, zonedTimeToUnixMs } from './time/zone.ts'
 import { DEFAULT_EOP, type EopTable } from './time/scales.ts'
 
@@ -23,6 +24,8 @@ export type NightSky = {
   moon: MoonInfo
   /** Bright planets between civil dusk and local midnight. */
   planets: PlanetSighting[]
+  /** Active meteor showers worth a look, best first. */
+  meteors: ShowerTonight[]
 }
 
 /**
@@ -93,6 +96,7 @@ export function forecast(req: ForecastRequest): Forecast {
       evening,
       moon: moonAt(req.place, duskish + 3_600_000, eop),
       planets: planetsVisible(req.place, duskish, Math.max(midnight, duskish + 3_600_000), 10, eop),
+      meteors: showersTonight(req.place, evening, eop),
     })
   }
 

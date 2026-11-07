@@ -1,6 +1,7 @@
 // The app shell: three tabs over one forecast for the chosen place.
 // Tonight is one scroll through the night over the real sky; Sky is the live
 // view (find things, or photograph them); Week is every pass for 8 days.
+// The forecast runs 15 days so "next two weeks" can go in one calendar file.
 // Docs: docs/DESIGN.md
 import { useEffect, useState } from 'react'
 import type { ForecastPass } from '../engine/index.ts'
@@ -8,12 +9,14 @@ import type { Place } from '../engine/place.ts'
 import { useForecast, useNow } from '../lib/hooks.ts'
 import { homeState } from '../lib/state.ts'
 import { loadSavedPlace, savePlace } from '../lib/places.ts'
+import { loadFamily, saveFamily, type Family } from '../lib/settings.ts'
 import { answerModel } from '../ui/Answer.tsx'
 import { SkyStage } from '../ui/SkyStage.tsx'
 import { TabBar, type Tab } from '../ui/app/TabBar.tsx'
 import { AlmanacPage } from '../ui/night/AlmanacPage.tsx'
 import { PassesScreen } from '../ui/app/PassesScreen.tsx'
 import { PlacePicker } from '../ui/app/PlacePicker.tsx'
+import { FamilySheet } from '../ui/app/FamilySheet.tsx'
 import { useStarCatalog } from '../sky/useStarCatalog.ts'
 import { requestMotionPermission } from '../sky/useOrientation.ts'
 
@@ -21,10 +24,17 @@ const NO_PASSES: never[] = []
 // Heights of the ruled tab bar and the Find / Photograph switch above it.
 const TAB_BAR_PX = 49
 const SWITCH_PX = 42
+const FORECAST_DAYS = 15
 
 export function Home() {
   const [place, setPlaceState] = useState<Place>(loadSavedPlace)
-  const fc = useForecast(place)
+  const fc = useForecast(place, FORECAST_DAYS)
+  const [family, setFamilyState] = useState<Family>(loadFamily)
+  const [familyOpen, setFamilyOpen] = useState(false)
+  const setFamily = (f: Family) => {
+    saveFamily(f)
+    setFamilyState(f)
+  }
   const catalog = useStarCatalog()
   const [focus, setFocus] = useState<ForecastPass | null>(null)
   const [nightMode, setNightMode] = useNightMode()
@@ -37,7 +47,7 @@ export function Home() {
   const now = useNow(ready?.passes ?? NO_PASSES)
   const tz = place.timeZone
 
-  const state = ready ? homeState(ready, now) : null
+  const state = ready ? homeState(ready, now, { bedtime: family.bedtime }) : null
   const model = state ? answerModel(state, focus, place.name, now, tz) : null
   const shown = model?.pass ?? null
 
@@ -91,6 +101,8 @@ export function Home() {
             nowMs={now}
             nightMode={nightMode}
             onNightMode={setNightMode}
+            family={family}
+            onFamily={() => setFamilyOpen(true)}
             onChangePlace={() => setPicking(true)}
             onFindIt={() => void go('sky')}
             onPhotograph={(id) => {
@@ -112,6 +124,7 @@ export function Home() {
           forecast={ready}
           place={place}
           nowMs={now}
+          bedtime={family.bedtime}
           onOpen={(p) => {
             setFocus(p)
             void go('tonight')
@@ -120,6 +133,9 @@ export function Home() {
       )}
 
       <TabBar tab={tab} onTab={(t) => void go(t)} />
+      {familyOpen && (
+        <FamilySheet family={family} onChange={setFamily} onClose={() => setFamilyOpen(false)} />
+      )}
       {picking && (
         <PlacePicker current={place} onPick={setPlace} onClose={() => setPicking(false)} />
       )}
