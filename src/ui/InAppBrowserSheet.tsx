@@ -26,9 +26,9 @@ export function InAppBrowserSheet({ onClose }: { onClose: () => void }) {
       ref={ref}
       onClose={onClose}
       aria-labelledby="inapp-title"
-      className="m-auto mb-0 w-full max-w-lg rounded-t-xl border border-hair-strong bg-night-2 p-6 text-ink backdrop:bg-black/60 sm:mb-auto sm:rounded-xl"
+      className="m-auto mb-0 w-full max-w-lg border-t border-ink bg-night p-6 text-ink backdrop:bg-black/70 sm:mb-auto sm:border"
     >
-      <h2 id="inapp-title" className="text-xl font-semibold">
+      <h2 id="inapp-title" className="serif text-[1.75rem] leading-tight">
         Open this in your phone’s browser
       </h2>
       <p className="mt-2 text-ink-2">
@@ -45,10 +45,7 @@ export function InAppBrowserSheet({ onClose }: { onClose: () => void }) {
         </p>
       )}
       <form method="dialog" className="mt-6">
-        <button
-          type="submit"
-          className="rounded-md border border-hair-strong px-4 py-2 font-medium hover:bg-night"
-        >
+        <button type="submit" className="link">
           Got it
         </button>
       </form>

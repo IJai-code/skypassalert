@@ -1,32 +1,29 @@
-// Every pass this week, as cards: evenings first, before-dawn for early
-// risers, each with a one-tap reminder.
+// Every pass this week, set as an almanac table: an italic heading per day, one
+// ruled line per pass with its path as a small sky-chart glyph. Evenings by
+// default; before-dawn passes for early risers. Docs: docs/DESIGN.md#almanac
 import { useState } from 'react'
 import type { Forecast, ForecastPass } from '../../engine/index.ts'
 import type { Place } from '../../engine/place.ts'
-import type { StarCatalog } from '../../engine/stars/stars.ts'
 import { passPeriod, passScore } from '../../engine/sky/schedule.ts'
 import { WORTH_IT } from '../../lib/state.ts'
 import { passKey } from '../night/buildNight.ts'
-import { SkyThumb } from './SkyThumb.tsx'
-import { dayLabel, dayOfMonth, formatTime, weekdayShort } from '../../lib/format.ts'
+import { PassChart, chartLabel } from '../night/PassChart.tsx'
+import { dayLabel, formatDate, formatTime } from '../../lib/format.ts'
 import { buildIcs } from '../../lib/ics.ts'
 import { compass8 } from '../../engine/describe/describe.ts'
-import { minutesLabel, pathSentence, stationName } from '../../copy/en.ts'
+import { fistsLabel, minutesLabel, pathSentence, stationName } from '../../copy/en.ts'
 import { detectInAppBrowser } from '../../lib/env.ts'
-import { IconBell } from './Icons.tsx'
 
 type Filter = 'evening' | 'dawn' | 'all'
 
 export function PassesScreen({
   forecast,
   place,
-  catalog,
   nowMs,
   onOpen,
 }: {
   forecast: Forecast
   place: Place
-  catalog: StarCatalog | null
   nowMs: number
   onOpen: (p: ForecastPass) => void
 }) {
@@ -72,16 +69,31 @@ export function PassesScreen({
     setTimeout(() => URL.revokeObjectURL(a.href), 10_000)
   }
 
-  return (
-    <div className="mx-auto max-w-md px-4 pt-[max(env(safe-area-inset-top),16px)] pb-32 wide:max-w-3xl">
-      <h1 className="display text-[2.5rem] leading-none tracking-[-0.03em]">Week</h1>
-      <p className="mt-1 text-sm text-ink-2">Next 8 days over {place.name}</p>
+  // One heading per day, in the place's own calendar.
+  const days: Array<{ key: string; label: string; passes: ForecastPass[] }> = []
+  for (const p of shown) {
+    const key = formatDate(p.start.unixMs, tz)
+    const last = days[days.length - 1]
+    if (last?.key === key) last.passes.push(p)
+    else {
+      const rel = dayLabel(p.start.unixMs, nowMs, tz)
+      days.push({
+        key,
+        label: rel === 'Today' || rel === 'Tomorrow' ? `${rel}, ${key.split(', ')[1]}` : key,
+        passes: [p],
+      })
+    }
+  }
 
-      <div
-        role="tablist"
-        aria-label="When"
-        className="mt-5 flex gap-1 rounded-full bg-white/[0.05] p-1 ring-1 ring-hair"
-      >
+  return (
+    <main className="mx-auto max-w-[36rem] px-5 pt-[max(env(safe-area-inset-top),14px)] pb-28">
+      <p className="mono flex justify-between border-b border-ink pb-1.5 text-[0.75rem] text-ink-2 uppercase">
+        <span className="text-ink">{place.name}</span>
+        <span>Next 8 days</span>
+      </p>
+      <h1 className="serif mt-6 text-[3.5rem] leading-none">Week</h1>
+
+      <div role="tablist" aria-label="When" className="mono-caps mt-5 flex gap-6 text-[0.75rem]">
         {(
           [
             ['evening', 'Evenings'],
@@ -95,100 +107,82 @@ export function PassesScreen({
             type="button"
             aria-selected={filter === id}
             onClick={() => setFilter(id)}
-            className={`flex-1 rounded-full py-2 text-sm font-semibold ${filter === id ? 'bg-white/15 text-ink' : 'text-ink-2'}`}
+            className={`py-1 ${filter === id ? 'link text-ink' : 'text-ink-3'}`}
           >
             {label}
           </button>
         ))}
       </div>
 
-      <button
-        type="button"
-        onClick={addAll}
-        className="display mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-action py-3 text-action-ink"
-      >
-        <IconBell className="size-5" /> Add this week’s best to my calendar
-      </button>
+      {days.map((d) => (
+        <section key={d.key} aria-label={d.label} className="mt-7">
+          <h2 className="serif-i border-b border-ink pb-1 text-[1.375rem]">{d.label}</h2>
+          <ul>
+            {d.passes.map((p) => (
+              <li key={passKey(p)} className="border-b border-rule">
+                <PassRow
+                  pass={p}
+                  place={place}
+                  weak={passScore(p) < WORTH_IT}
+                  onOpen={() => onOpen(p)}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+      {!shown.length && (
+        <p className="mt-7 border-y border-rule py-4 text-ink-2">No passes in this window.</p>
+      )}
 
-      <ul className="mt-5 border-t border-hair">
-        {shown.map((p) => {
-          const weak = passScore(p) < WORTH_IT
-          return (
-            <li key={passKey(p)} className={`border-b border-hair ${weak ? 'opacity-55' : ''}`}>
-              <PassRow
-                pass={p}
-                place={place}
-                catalog={catalog}
-                nowMs={nowMs}
-                onOpen={() => onOpen(p)}
-              />
-            </li>
-          )
-        })}
-        {!shown.length && <li className="py-5 text-ink-2">No passes in this window.</li>}
-      </ul>
-      <p className="mt-4 text-xs text-ink-3">
-        Faded rows are low or faint: listed for completeness, not worth a special trip.
+      <button type="button" onClick={addAll} className="link mt-6 text-[1rem]">
+        Add this week’s best evenings to my calendar
+      </button>
+      <p className="mt-3 text-[0.8125rem] text-ink-3">
+        Lines marked “low or faint” are listed for completeness, not worth a special trip.
       </p>
-    </div>
+    </main>
   )
 }
+
 export function PassRow({
   pass,
   place,
-  catalog,
-  nowMs,
+  weak = false,
   onOpen,
-  trailing,
 }: {
   pass: ForecastPass
   place: Place
-  catalog: StarCatalog | null
-  nowMs: number
+  weak?: boolean
   onOpen: () => void
-  trailing?: React.ReactNode
 }) {
   const tz = place.timeZone
   return (
-    <div className="flex items-center gap-4 py-3">
-      <button
-        type="button"
-        onClick={onOpen}
-        className="flex min-w-0 flex-1 items-center gap-3 text-left"
-      >
-        <div className="relative size-16 shrink-0 overflow-hidden rounded-full ring-1 ring-white/10">
-          {pass.noradId === 25544 ? (
-            <img src="/img/iss.webp" alt="" loading="lazy" className="h-full w-full object-cover" />
-          ) : (
-            <SkyThumb
-              pass={pass}
-              place={place}
-              catalog={catalog}
-              labels={false}
-              horizonAt={0.8}
-              className="block h-full w-full"
-              label=""
-            />
-          )}
-        </div>
-        <div className="min-w-0">
-          <p className="text-[0.75rem] text-ink-3">
-            {dayLabel(pass.start.unixMs, nowMs, tz)} · {weekdayShort(pass.start.unixMs, tz)}{' '}
-            {dayOfMonth(pass.start.unixMs, tz)}
-          </p>
-          <p className="display tnum text-[1.5rem] leading-tight tracking-[-0.02em]">
-            {formatTime(pass.start.unixMs, tz)}{' '}
-            <span className="text-[0.875rem] font-semibold text-ink-2">
-              {stationName(pass.noradId).short}
-            </span>
-          </p>
-          <p className="text-[0.75rem] text-ink-2">
-            {Math.round(pass.peak.elDeg)}° high · {compass8(pass.start.azDeg)}→
-            {compass8(pass.end.azDeg)} · {minutesLabel(pass.end.unixMs - pass.start.unixMs)}
-          </p>
-        </div>
-      </button>
-      {trailing}
-    </div>
+    <button
+      type="button"
+      onClick={onOpen}
+      className="grid w-full grid-cols-[2.75rem_4.25rem_1fr] items-center gap-3 py-2.5 text-left"
+    >
+      <PassChart
+        pass={pass}
+        size={44}
+        labels={false}
+        formatMinute={(ms) => formatTime(ms, tz)}
+        label=""
+      />
+      <span className="mono text-[0.875rem]">
+        {formatTime(pass.start.unixMs, tz).replace(' ', '\u00a0').toLowerCase()}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-station">
+          {stationName(pass.noradId).short}
+          {weak && <span className="serif-i text-ink-3"> low or faint</span>}
+        </span>
+        <span className="mono block text-[0.6875rem] text-ink-3" aria-label={chartLabel(pass)}>
+          {fistsLabel(pass.peak.elDeg)} up · {compass8(pass.start.azDeg)}→{compass8(pass.end.azDeg)}{' '}
+          · {minutesLabel(pass.end.unixMs - pass.start.unixMs)}
+        </span>
+      </span>
+    </button>
   )
 }

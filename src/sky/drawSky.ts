@@ -8,6 +8,9 @@ import type { StarCatalog } from '../engine/stars/stars.ts'
 import { starColor } from '../engine/stars/stars.ts'
 import { enu, project, type CameraBasis, type V3, type Viewport } from './projection.ts'
 
+/** Sky labels share the almanac's figure face (D-031). */
+const LABEL_FONT = "'Plex Mono', ui-monospace, Menlo, monospace"
+
 export type TrackPoint = { azDeg: number; elDeg: number; unixMs: number; magnitude: number }
 
 export type DrawOptions = {
@@ -189,7 +192,7 @@ export function drawSky(ctx: CanvasRenderingContext2D, o: DrawOptions): void {
     }
     ctx.globalAlpha = 1
     if (o.labels) {
-      ctx.font = '500 11px system-ui, -apple-system, sans-serif'
+      ctx.font = `500 11px ${LABEL_FONT}`
       ctx.fillStyle = pal.muted
       for (const [name, i] of Object.entries(named)) {
         const p = pos[i]
@@ -206,14 +209,14 @@ export function drawSky(ctx: CanvasRenderingContext2D, o: DrawOptions): void {
         const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length
         if (cx < 0 || cx > W || cy < 0 || cy > H) continue
         ctx.fillStyle = o.red ? 'rgba(150,36,28,0.6)' : 'rgba(180,195,235,0.45)'
-        ctx.font = 'italic 500 11px system-ui, -apple-system, sans-serif'
+        ctx.font = `italic 500 11px ${LABEL_FONT}`
         ctx.fillText(name, cx + 10, cy + 18)
       }
     }
   }
 
   // 3. Planets and the Moon.
-  ctx.font = '600 11px system-ui, -apple-system, sans-serif'
+  ctx.font = `600 11px ${LABEL_FONT}`
   if (clean) {
     // Thin rings with names: enough to confirm the overlay sits on the real thing.
     const ring = (az: number, el: number, r: number, name: string) => {
@@ -225,7 +228,7 @@ export function drawSky(ctx: CanvasRenderingContext2D, o: DrawOptions): void {
       ctx.arc(p.x, p.y, r, 0, Math.PI * 2)
       ctx.stroke()
       ctx.fillStyle = 'rgba(233,242,245,0.85)'
-      ctx.font = '600 12px Archivo, system-ui, sans-serif'
+      ctx.font = `600 12px ${LABEL_FONT}`
       ctx.fillText(name, p.x + r + 6, p.y + 4)
     }
     for (const pl of scene.planets) {
@@ -282,7 +285,7 @@ export function drawSky(ctx: CanvasRenderingContext2D, o: DrawOptions): void {
       ctx.beginPath()
       ctx.arc(p.x, p.y, 30, 0, Math.PI * 2)
       ctx.stroke()
-      ctx.font = '700 12px Archivo, system-ui, sans-serif'
+      ctx.font = `700 12px ${LABEL_FONT}`
       const text = o.highlight.label.toUpperCase()
       const tw = ctx.measureText(text).width + 16
       const tx = p.x - tw / 2
@@ -334,7 +337,7 @@ function drawMoon(ctx: CanvasRenderingContext2D, o: DrawOptions, pal: Pal) {
   ctx.restore()
   if (o.labels) {
     ctx.fillStyle = pal.muted
-    ctx.font = '500 11px system-ui, -apple-system, sans-serif'
+    ctx.font = `500 11px ${LABEL_FONT}`
     ctx.fillText('Moon', p.x + r + 6, p.y + 4)
   }
 }
@@ -418,7 +421,7 @@ function drawHorizon(ctx: CanvasRenderingContext2D, o: DrawOptions, pal: Pal) {
     if (o.style === 'clean') {
       if (az % 90 !== 0) continue
       ctx.fillStyle = 'rgba(233,242,245,0.8)'
-      ctx.font = '700 13px Archivo, system-ui, sans-serif'
+      ctx.font = `700 13px ${LABEL_FONT}`
       ctx.fillText(COMPASS[az / 45]!, p.x, p.y - 8)
       continue
     }
@@ -429,11 +432,11 @@ function drawHorizon(ctx: CanvasRenderingContext2D, o: DrawOptions, pal: Pal) {
     ctx.stroke()
     if (major) {
       ctx.fillStyle = az === 0 ? pal.station : pal.ink
-      ctx.font = '700 13px system-ui, -apple-system, sans-serif'
+      ctx.font = `700 13px ${LABEL_FONT}`
       ctx.fillText(COMPASS[az / 45]!, p.x, p.y + 25)
     } else if (o.labels && az % 30 === 0) {
       ctx.fillStyle = pal.muted
-      ctx.font = '500 10px system-ui, -apple-system, sans-serif'
+      ctx.font = `500 10px ${LABEL_FONT}`
       ctx.fillText(`${az}°`, p.x, p.y + 22)
     }
   }
@@ -471,7 +474,7 @@ function drawTrack(ctx: CanvasRenderingContext2D, o: DrawOptions, pal: Pal) {
   // Minute marks with times.
   const first = track[0]!.unixMs
   const last = track[track.length - 1]!.unixMs
-  ctx.font = '600 12px system-ui, -apple-system, sans-serif'
+  ctx.font = `600 12px ${LABEL_FONT}`
   for (let m = Math.ceil(first / 60_000) * 60_000; m <= last; m += 60_000) {
     const pos = interpolate(track, m)
     const next = interpolate(track, m + 2000)

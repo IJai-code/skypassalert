@@ -11,7 +11,6 @@ import {
   searchCities,
   type CityDb,
 } from '../../lib/places.ts'
-import { IconPin } from './Icons.tsx'
 
 export function PlacePicker({
   current,
@@ -61,32 +60,28 @@ export function PlacePicker({
       ref={ref}
       onClose={onClose}
       aria-labelledby="place-title"
-      className="m-auto mb-0 h-[85dvh] w-full max-w-lg rounded-t-[28px] bg-surface p-0 text-ink backdrop:bg-black/60 sm:mb-auto sm:h-[70dvh] sm:rounded-[28px]"
+      className="m-auto mb-0 h-[85dvh] w-full max-w-lg border-t border-ink bg-night p-0 text-ink backdrop:bg-black/70 sm:mb-auto sm:h-[70dvh] sm:border"
     >
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between px-5 pt-5">
-          <h2 id="place-title" className="display text-xl">
+          <h2 id="place-title" className="serif text-[1.75rem] leading-tight">
             Where are you looking from?
           </h2>
           <form method="dialog">
-            <button
-              type="submit"
-              className="rounded-full bg-white/[0.06] px-3 py-1.5 text-sm text-ink-2 ring-1 ring-hair"
-            >
+            <button type="submit" className="link mono text-[0.8125rem] text-ink-2">
               Close
             </button>
           </form>
         </div>
-        <p className="px-5 pt-1 text-sm text-ink-3">Now: {current.name}</p>
+        <p className="mono px-5 pt-1 text-[0.75rem] text-ink-3 uppercase">Now: {current.name}</p>
 
         <div className="px-5 pt-4">
           <button
             type="button"
             onClick={useMyLocation}
-            className="display flex w-full items-center justify-center gap-2 rounded-2xl bg-action py-3.5 text-action-ink"
+            className="link text-[1.0625rem] text-station"
           >
-            <IconPin className="size-5" />
-            {geo === 'finding' ? 'Finding you…' : 'Use my location'}
+            {geo === 'finding' ? 'Finding you…' : 'Use my location →'}
           </button>
           <p className="mt-2 text-xs text-ink-3">
             {geo === 'denied'
@@ -103,21 +98,21 @@ export function PlacePicker({
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search a city, e.g. Fremont"
               autoComplete="off"
-              className="w-full rounded-2xl bg-white/[0.06] px-4 py-3.5 text-[1rem] text-ink ring-1 ring-hair outline-none placeholder:text-ink-3 focus:ring-action"
+              className="w-full border-b border-ink bg-transparent px-0 py-2.5 text-[1.0625rem] text-ink outline-none placeholder:text-ink-3 focus:border-station"
             />
           </label>
         </div>
 
-        <ul className="mt-3 min-h-0 flex-1 overflow-y-auto px-3 pb-6">
+        <ul className="mt-3 min-h-0 flex-1 overflow-y-auto px-5 pb-6">
           {(query.length >= 2 ? results : picks).map((row) => (
             <li key={row[0]}>
               <button
                 type="button"
                 onClick={() => db && onPick(placeFromCity(db, row))}
-                className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-left hover:bg-white/[0.05]"
+                className="flex w-full items-baseline justify-between border-b border-rule py-3 text-left hover:text-station"
               >
                 <span>{cityLabel(row)}</span>
-                <span className="text-xs text-ink-3">
+                <span className="mono text-[0.75rem] text-ink-3">
                   {row[9] >= 1e6
                     ? `${(row[9] / 1e6).toFixed(1)}M`
                     : `${Math.round(row[9] / 1000)}k`}
@@ -126,14 +121,14 @@ export function PlacePicker({
             </li>
           ))}
           {query.length < 2 && db && (
-            <li className="px-3 pt-2 text-xs text-ink-3">
+            <li className="pt-3 text-xs text-ink-3">
               Bay Area · type to search 8,000+ cities worldwide
             </li>
           )}
           {query.length >= 2 && db && !results.length && (
-            <li className="px-3 py-3 text-ink-2">No match. Try a nearby larger city.</li>
+            <li className="py-3 text-ink-2">No match. Try a nearby larger city.</li>
           )}
-          {!db && <li className="px-3 py-3 text-ink-3">Loading cities…</li>}
+          {!db && <li className="py-3 text-ink-3">Loading cities…</li>}
         </ul>
         <p className="px-5 pb-[max(env(safe-area-inset-bottom),14px)] text-[10px] text-ink-3">
           City data © GeoNames (CC BY 4.0)
