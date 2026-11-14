@@ -106,18 +106,20 @@ type Pal = {
   muted: string
 }
 
+// Engraved like an atlas plate (D-031): cream linework on the page's night
+// paper, land a shade lighter than the sea, no glow.
 const DAY: Pal = {
-  space: '#000004',
-  ocean: '#1b4a72',
-  land: '#6c7a5e',
-  coast: 'rgba(230,240,255,0.25)',
-  grid: 'rgba(200,220,255,0.08)',
-  night: [2, 5, 14],
-  twilight: [120, 60, 50],
+  space: '#0d1118',
+  ocean: '#141b28',
+  land: '#252c37',
+  coast: 'rgba(233,228,214,0.75)',
+  grid: 'rgba(233,228,214,0.12)',
+  night: [4, 6, 10],
+  twilight: [70, 52, 34],
   station: '#ffc65c',
-  you: '#40c9d9',
-  ink: 'rgba(236,242,247,0.95)',
-  muted: 'rgba(180,195,210,0.7)',
+  you: '#e9e4d6',
+  ink: 'rgba(233,228,214,0.95)',
+  muted: 'rgba(182,177,163,0.8)',
 }
 const RED: Pal = {
   space: '#000',
@@ -151,14 +153,15 @@ export function drawGlobe(ctx: CanvasRenderingContext2D, v: GlobeView, s: GlobeS
   ctx.fillStyle = pal.space
   ctx.fillRect(0, 0, W, H)
 
-  // Disc: ocean, with a thin atmosphere on the limb.
+  // Disc: ocean, ruled round its edge.
   ctx.save()
   ctx.beginPath()
   ctx.arc(pr.ox, pr.oy, pr.limbPx, 0, Math.PI * 2)
   ctx.fillStyle = pal.ocean
-  ctx.shadowColor = s.red ? 'rgba(200,40,30,0.5)' : 'rgba(120,180,255,0.55)'
-  ctx.shadowBlur = 24
   ctx.fill()
+  ctx.strokeStyle = pal.coast
+  ctx.lineWidth = u
+  ctx.stroke()
   ctx.restore()
   ctx.save()
   ctx.beginPath()
@@ -349,7 +352,7 @@ function label(
   side: 1 | -1,
   u: number,
 ) {
-  ctx.font = `600 ${Math.round(13 * u)}px system-ui, -apple-system, sans-serif`
+  ctx.font = `500 ${Math.round(12 * u)}px 'Plex Mono', ui-monospace, Menlo, monospace`
   ctx.textAlign = side === 1 ? 'left' : 'right'
   ctx.textBaseline = 'middle'
   ctx.lineWidth = 3

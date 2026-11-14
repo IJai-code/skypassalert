@@ -87,7 +87,7 @@ export default function WaveBack({ pass, place, catalog, red, onClose }: Props) 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       drawGlobe(
         ctx,
-        { width: w, height: h, centre: st, cy: 0.4 },
+        { width: w, height: h, centre: st, cy: 0.5 },
         {
           earth,
           subsolar,
@@ -136,21 +136,12 @@ export default function WaveBack({ pass, place, catalog, red, onClose }: Props) 
       role="dialog"
       aria-modal="true"
       aria-labelledby="wave-title"
-      className="fixed inset-0 z-50 bg-black text-ink"
+      className="fixed inset-0 z-50 flex flex-col bg-night text-ink"
     >
-      <canvas
-        ref={canvasRef}
-        role="img"
-        aria-label={`Earth seen from above ${name} at ${formatTime(t, tz)}: ${sentence}`}
-        className="absolute inset-0 block h-full w-full"
-      />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/70 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black via-black/80 to-transparent" />
-
-      <div className="absolute inset-x-0 top-0 flex items-start justify-between px-4 pt-[max(env(safe-area-inset-top),14px)]">
-        <div>
-          <p className="hud-caps text-ink-2">Their view · {formatDate(t, tz)}</p>
-          <h2 id="wave-title" className="display mt-0.5 text-[1.5rem] leading-tight">
+      <div className="flex items-start justify-between gap-4 bg-night px-5 pt-[max(env(safe-area-inset-top),14px)] pb-3">
+        <div className="min-w-0 flex-1 border-b border-ink pb-2">
+          <p className="mono-caps text-ink-2">Their view · {formatDate(t, tz)}</p>
+          <h2 id="wave-title" className="serif mt-1 text-[1.875rem] leading-none">
             Looking down from {name}
           </h2>
         </div>
@@ -158,29 +149,24 @@ export default function WaveBack({ pass, place, catalog, red, onClose }: Props) 
           ref={closeRef}
           type="button"
           onClick={onClose}
-          className="glass grid size-11 shrink-0 place-items-center rounded-full ring-1 ring-white/15"
-          aria-label="Close"
+          className="link mono shrink-0 pt-1 text-[0.8125rem] text-ink-2"
         >
-          <svg
-            viewBox="0 0 24 24"
-            className="size-5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            aria-hidden="true"
-          >
-            <path d="M6 6l12 12M18 6 6 18" />
-          </svg>
+          Close
         </button>
       </div>
+      <div className="relative min-h-0 flex-1">
+        <canvas
+          ref={canvasRef}
+          role="img"
+          aria-label={`Earth seen from above ${name} at ${formatTime(t, tz)}: ${sentence}`}
+          className="absolute inset-0 block h-full w-full"
+        />
+      </div>
 
-      <div className="absolute inset-x-0 bottom-0 px-5 pb-[max(env(safe-area-inset-bottom),20px)]">
-        <p className="hud text-[3.25rem] leading-none font-semibold tracking-[-0.03em]">
-          {formatTime(t, tz)}
-        </p>
+      <div className="border-t border-ink bg-night px-5 pt-3 pb-[max(env(safe-area-inset-bottom),20px)]">
+        <p className="serif tnum text-[2.5rem] leading-none">{formatTime(t, tz)}</p>
         <p
-          className="mt-3 max-w-[34rem] text-[1.0625rem] leading-snug text-pretty"
+          className="serif-i mt-1.5 max-w-[34rem] text-[1.1875rem] leading-snug text-pretty"
           aria-live="polite"
         >
           {sentence}
@@ -198,25 +184,21 @@ export default function WaveBack({ pass, place, catalog, red, onClose }: Props) 
             className="w-full accent-[var(--station)]"
           />
         </label>
-        <div className="mt-1 flex justify-between text-[0.75rem] text-ink-3">
+        <div className="mono mt-1 flex justify-between text-[0.6875rem] text-ink-3">
           <span>{formatTime(from, tz)}</span>
           <span>Drag to fly the orbit</span>
           <span>{formatTime(to, tz)}</span>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2.5">
+        <div className="mt-4 flex flex-wrap gap-x-6 gap-y-3">
           <button
             type="button"
             onClick={() => void share()}
             disabled={sharing === 'busy'}
-            className="display flex items-center gap-2 rounded-full bg-action px-5 py-3 text-[0.9375rem] text-action-ink disabled:opacity-60"
+            className="link text-station disabled:no-underline"
           >
             {sharing === 'busy' ? 'Making your card…' : 'Share a wave card'}
           </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="display rounded-full bg-white/[0.08] px-5 py-3 text-[0.9375rem] ring-1 ring-white/15"
-          >
+          <button type="button" onClick={onClose} className="link">
             Back to your sky
           </button>
         </div>
@@ -235,7 +217,7 @@ export default function WaveBack({ pass, place, catalog, red, onClose }: Props) 
 
 function Legend() {
   return (
-    <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[0.75rem] text-ink-2">
+    <ul className="mono mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[0.6875rem] text-ink-2">
       <li className="flex items-center gap-1.5">
         <span aria-hidden="true" className="inline-block h-0.5 w-4 bg-station" /> In sunlight
       </li>
@@ -247,7 +229,7 @@ function Legend() {
         In Earth’s shadow
       </li>
       <li className="flex items-center gap-1.5">
-        <span aria-hidden="true" className="inline-block size-2 rounded-full bg-action" /> You
+        <span aria-hidden="true" className="inline-block size-2 rounded-full bg-ink" /> You
       </li>
       <li className="flex items-center gap-1.5">
         <span

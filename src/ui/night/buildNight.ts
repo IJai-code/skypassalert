@@ -1,7 +1,7 @@
 // One night as a list of stops in time order: sunset, first stars, every
 // visible pass, the Moon, the planets at their best, sunrise. The Tonight tab
-// scrolls through these; the sky behind it follows the clock.
-// Docs: docs/DESIGN.md#the-night
+// sets them as a ruled table, one line per stop.
+// Docs: docs/DESIGN.md#almanac
 import type {
   Forecast,
   ForecastPass,

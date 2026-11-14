@@ -7,7 +7,8 @@ Every third-party asset, dataset or library that ships to users, or that our dat
 |---|---|---|---|---|
 | SkyPassAlert logo, favicon, hero arc | Brand | Original, drawn in SVG code (`src/brand/`, `public/favicon.svg`) | MIT (this repo) | n/a |
 | System fonts | Body text | The user's device | n/a (nothing shipped) | n/a |
-| Archivo (variable, subset) | Instrument readouts (`public/fonts/archivo-var.woff2`) | The Archivo Project Authors, https://github.com/Omnibus-Type/Archivo | SIL Open Font License 1.1 (`public/fonts/Archivo-OFL.txt`) | OFL text shipped alongside |
+| Instrument Serif (Regular, Italic; Latin subset) | Times and headlines (`public/fonts/instrument-serif*.woff2`) | The Instrument Serif Project Authors, https://github.com/Instrument/instrument-serif (woff2 Latin subset as served by Google Fonts) | SIL Open Font License 1.1 (`public/fonts/InstrumentSerif-OFL.txt`) | OFL text shipped alongside |
+| IBM Plex Mono (400, 500; Latin subset) | Figures, tables, labels (`public/fonts/plex-mono-*.woff2`) | IBM Corp., https://github.com/IBM/plex (woff2 Latin subset as served by Google Fonts) | SIL Open Font License 1.1 (`public/fonts/IBMPlexMono-OFL.txt`) | OFL text shipped alongside; Reserved Font Name "Plex" respected (unmodified files) |
 | React, React DOM | UI runtime | https://react.dev | MIT | Bundled license comments |
 | satellite.js 7.1.0 | SGP4 propagation (TEMPORARY until Phase 4) | https://github.com/shashwatak/satellite-js | MIT | License kept in bundle |
 | Orbital elements (OMM JSON) | `public/data/elements.json`, `data/archive/` | CelesTrak GP data, https://celestrak.org/NORAD/elements/ | Public data; we follow https://celestrak.org/usage-policy.php | "CelesTrak orbital data" in the site footer |
@@ -20,13 +21,6 @@ Every third-party asset, dataset or library that ships to users, or that our dat
 | Fremont coordinates | `src/presets.ts` | GeoNames (geonameId 5350734) | CC BY 4.0 | Footer + place picker |
 | City search list | `public/data/cities.json` (built by `scripts/build-cities.mjs` from cities15000 + admin1CodesASCII) | GeoNames, https://download.geonames.org/export/dump/ | CC BY 4.0 | “City data © GeoNames (CC BY 4.0)” in the place picker and footer |
 | Earth outlines and sea names | `public/data/earth-110m.json` (built by `scripts/build-earth.mjs` from `ne_110m_land` + `ne_110m_geography_marine_polys`, v5.1.2) | Natural Earth, https://www.naturalearthdata.com/ (via https://github.com/nvkelso/natural-earth-vector) | Public domain | Not required; credited in the footer and docs/learn/14-wave-back.md |
-| Moon photo | `public/img/moon.webp` | NASA Goddard / LRO, images.nasa.gov GSFC_20171208_Archive_e000868 | NASA media: public domain, no endorsement implied | Credited on card |
-| Saturn photo | `public/img/saturn.webp` | NASA/JPL/Space Science Institute (Cassini), PIA11613 | Public domain | Credited on card |
-| Jupiter photo | `public/img/jupiter.webp` | NASA/JPL/Space Science Institute (Cassini), PIA04866 | Public domain | Credited on card |
-| Mars photo | `public/img/mars.webp` | NASA/JPL/USGS (Viking), PIA00407 | Public domain | Credited on card |
-| Venus photo | `public/img/venus.webp` | NASA/JPL-Caltech (Mariner 10), PIA23791 | Public domain | Credited on card |
-| ISS photo | `public/img/iss.webp` | NASA, Expedition 56 crew, iss056e201248 | Public domain | Credited on card |
-| Milky Way photo | `public/img/milkyway.webp` (cropped to remove a spacecraft window label) | NASA, ISS crew, iss074e0521637 | Public domain | Credited on card |
 
 ## Planned (not yet shipped)
 | Asset | Phase | Source | License / terms | Attribution required |
