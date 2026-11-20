@@ -1,15 +1,23 @@
 # Design
 
-How SkyPassAlert looks, sounds and behaves, and why. Every rule traces to something we observed or measured. Last reviewed 2026-11-06 (Phase 3a).
+How SkyPassAlert looks, sounds and behaves, and why. Every rule traces to something we observed or measured. Last reviewed 2026-11-19 (Phase 3c).
 
 ## 0. Current direction: The Almanac (2026-11-03, D-031)
 **The app reads like an astronomical almanac printed for your town tonight.** It replaces The Night (D-029), which Ishaan judged "standard AI": glass pills, filled pill buttons, a grotesk time and a floating tab bar.
 
 <a id="almanac"></a>
+<a id="flight"></a>
+- **The Flight** (`src/ui/flight/`, D-033): the top of Tonight is a film you scroll. A sticky full-screen stage shows the real sky from your yard at the pass's start, with the answer set **on the ground** below the horizon (the ground is the page's paper, so no text sits on the drawing).
+  - **Scroll is the clock.** The pass plays as you scroll (linear in time); the camera turns with the station; the big time docks into a serif clock line at the top ("7:34 pm · west-northwest, 2 fists up").
+  - **Lift-off:** the camera climbs to 5,000 km, watching the station, then looks down on you both: coastlines as cream hairlines, Earth's edge as one hairline, the orbit amber in sunlight and grey in shadow, a line of sight, "You" and the station's name in mono. One italic sentence says why you can see it.
+  - **Scrub rail:** a minute ruler down the right edge (slider; arrow keys, drag). It moves the page, so scroll stays the one clock.
+  - **Captions:** one italic sentence per beat, swapped with a 200 ms fade, never looping.
+  - **No-pass nights:** the film scrubs sunset into dark (captions name the twilight stage) and rings the "Up instead" object, following it as the sky turns.
+  - **Fallbacks:** the 2D `drawSky` picture is the first paint and scrubs on its own if the GPU won't start; no WebGL2 or a low-memory phone gets one still screen; reduced motion holds one wide frame and cuts to orbit.
 - **Tonight tab** (`src/ui/night/AlmanacPage.tsx`), top to bottom:
-  - **Running head:** place (a link to change it), coordinates, date, over a cream rule. Under it: "Bedtime 9:30 pm" (opens the family sheet; adds "· simple words" when on) and "Red light off/on".
-  - **The answer** (3-second rule): a mono kicker "Tonight in Fremont, CA" with the station's full name; the time in Instrument Serif at up to 9rem with an italic "pm"; a mono countdown; the path sentence in italic with its key phrase ("almost straight overhead") in amber.
-  - **Chart and directions:** `PassChart` beside the start cue, brightness and the fade note.
+  - **Running head** (over the top of the stage): place (a link to change it), coordinates, date, over a cream rule. Under it: "Bedtime 9:30 pm" (opens the family sheet; adds "· simple words" when on) and "Red light off/on".
+  - **The answer** (3-second rule, on the stage's ground): a mono kicker "Tonight in Fremont, CA" with the station's full name; the time in Instrument Serif (up to 8rem on the stage) with an italic "pm"; a mono countdown; the path sentence in italic with its key phrase ("almost straight overhead") in amber.
+  - **How to see it** (first thing on the paper after the stage): `PassChart` beside the start cue, brightness and the fade note.
   - **Links:** Find it in the sky → (amber) · Remind me · Their view.
   - **Tonight, hour by hour:** a ruled table of `buildNight()` stops (mono time · event · one figure). Station lines are amber. Each line opens in place.
   - **Later this week**, "Add the next 2 weeks to my calendar" with a mono sub-line (count, bedtime, the drift warning), then data age, the QR panel on desktop, and the footer (About · Privacy · …).
@@ -56,7 +64,7 @@ Real data that shaped the product: this week in Fremont, every visible ISS pass 
 ## 2. Principles
 1. **Answer first.** The top of the screen is a sentence a parent can act on in three seconds.
 2. **Computed, never decorative.** Every graphic (sky map, tonight strip, brightness dots) is drawn from the real prediction. If it doesn't encode data, it doesn't ship.
-3. **Calm.** Hairlines, not boxes. Hierarchy from size and weight. Motion only to replay the real pass.
+3. **Calm.** Hairlines, not boxes. Hierarchy from size and weight. Motion only along real time or real geometry, and only when you move it (D-033): the Flight follows your scroll, nothing plays by itself.
 4. **Honest.** Data age on every prediction. Examples are labelled as examples. Low, faint passes stay listed but recede visually.
 5. **Human units.** Fists at arm's length (~10°), "where the sun went down", "brighter than any star".
 

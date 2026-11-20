@@ -257,3 +257,27 @@ Node 22.18+ strips TypeScript types natively. Labs (`scripts/labs/*.ts`) import 
   - `/privacy/` and `/about/` are static Vite entry pages with the shared CSS and no app JS.
   - The about page's "who makes it" paragraph is a draft for Ishaan to edit. It deliberately has no name or school.
 - **SEO:** sitemap, `robots.txt` sitemap line, `WebApplication` JSON-LD, a 1200×630 `og.png` rendered from original SVG (`scripts/render-og.mjs`), and canonical URLs on each page.
+
+## D-033 The Flight: the top of Tonight as a scroll-driven 3D film (2026-11-19)
+- **Context:** Ishaan asked for UI/UX "at this level" and pointed to two reels: a "transition as scroll" showcase (marcelodesignxh) and a WebGL agency site (jerrythewebdev). What both share is one move: **scrolling drives a single camera through one continuous scene**, with big type that docks as you go. Our page was static: big text over a small 2D chart.
+- **Choice:** keep the move, not the look. The reels' purple gradients, particles and glass stay banned (DESIGN §3). Every pixel is computed from the prediction, and **scroll is the clock**:
+  1. **Tonight:** you stand in your yard facing where the pass begins, with the answer set on the ground below the horizon.
+  2. **The pass:** scrolling plays the real pass across the real sky. The camera turns with the station; the big time docks into a clock line at the top.
+  3. **Lift-off:** the camera climbs exponentially (metres, then kilometres, then hundreds) while watching the station, then looks down on you both from 5,000 km. The sentence says why you can see it: you're in darkness, it's in sunlight.
+  4. **Settle:** the page continues on paper.
+  - On nights with no pass, the film scrubs dusk into dark and frames the "Up instead" object, following it as the sky turns.
+- **Principle amended (DESIGN §2.3):** "Motion only to replay the real pass" becomes "**Motion only along real time or real geometry, and only when you move it.**" Nothing loops; nothing moves on its own.
+- **How it's built:**
+  - Raw WebGL2, no library: one full-screen ray tracer for Earth, sky and space, plus points (stars, Moon, planets, the station), hairlines (coastlines, orbit, line of sight) and a screen-space ribbon for the pass.
+  - One world: your east-north-up frame in km, Earth's centre at (0, 0, −R). The ray–sphere test uses c = h(2R + h), so float32 doesn't cancel to noise 1.7 m above a 6,371 km ball.
+  - Labels are DOM text placed by a CPU twin of the GPU projection.
+  - The page scrolls natively; the film chases the scroll with a 0.12 s exponential follow. The scrub rail and its keys move the page, so scroll stays the one clock.
+- **Loading and fallbacks:**
+  - First paint is unchanged: the answer, plus a 2D picture of the sky (`drawSky`) that also scrubs with the scroll.
+  - The film's code (8.3 KB gzipped) loads when the browser is idle; the GPU starts on your first touch, scroll or key.
+  - No WebGL2, ≤ 2 GB RAM or ≤ 2 cores: no tall section, just the still picture. WebGL2 that won't start or loses its context: the 2D picture keeps scrubbing.
+  - Reduced motion: the camera holds one wide frame and cuts (no flight) to orbit.
+  - Frames are drawn only when something changes; nothing renders while the page is still or the stage is offscreen.
+- **Also:** tab changes cross-fade (View Transitions, 180 ms, off under reduced motion); paper rules draw across once as they scroll into view (CSS scroll timeline, where supported).
+- **Budgets:** initial JS 113.8 KB (+7 KB for the stage, rail and camera maths); film chunk 8.3 KB against its own 40 KB budget, enforced in `check-bundle-size.mjs`.
+- **Not done (yet):** the shared-element morph of the station's time between Tonight and Week (plain cross-fade for now), and a 600 ms re-aim when switching passes (it cuts instead, which reads better than gliding through the wrong pass).

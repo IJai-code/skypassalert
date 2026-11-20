@@ -40,6 +40,8 @@ import { Footer } from '../Chrome.tsx'
 import { TakeItOutside } from '../TakeItOutside.tsx'
 import { bestOtherThing, buildNight, passKey, type OtherThing, type Stop } from './buildNight.ts'
 import { chartLabel, PassChart } from './PassChart.tsx'
+import { FlightStage, type StageInput } from '../flight/FlightStage.tsx'
+import { enu } from '../../sky/projection.ts'
 
 const WaveBack = lazy(() => import('../wave/WaveBack.tsx'))
 
@@ -77,6 +79,27 @@ export function AlmanacPage(props: Props) {
   const hero = model.pass
   // On a night without a pass, the next one is a footnote, not the headline.
   const heroIsTonight = hero !== null && model.headline === undefined
+
+  // What the Flight plays: tonight's pass, or (no pass) dusk into dark,
+  // facing the thing worth stepping out for.
+  const stageInput: StageInput = useMemo(() => {
+    if (hero && heroIsTonight) return { kind: 'pass', pass: hero }
+    const ev = night?.night.evening
+    const sunset = ev?.sunsetMs ?? night?.startMs ?? minute * 60_000
+    const end = sunset + 4 * 3_600_000
+    // Open at sunset, or at "now" if the evening is already under way.
+    const from = Math.max(sunset, Math.min(minute * 60_000, end - 3_600_000))
+    const thing = other ? otherInSky(other) : null
+    return {
+      kind: 'dusk',
+      fromMs: from,
+      toMs: end,
+      faceAz: thing?.azDeg ?? ev?.sunsetAzDeg ?? 270,
+      highlight: thing
+        ? { dir: enu(thing.azDeg, thing.elDeg), refMs: thing.atMs, label: thing.label }
+        : null,
+    }
+  }, [hero, heroIsTonight, night, other, minute])
   const sunsetAz = (p: ForecastPass) =>
     forecast.nights.find(
       (n) => n.evening.sunsetMs !== null && Math.abs(p.start.unixMs - n.evening.sunsetMs) < 36e6,
@@ -103,242 +126,263 @@ export function AlmanacPage(props: Props) {
     .replace(/,/g, '')
 
   return (
-    <main className="mx-auto max-w-[36rem] px-5 pt-[max(env(safe-area-inset-top),14px)] pb-28">
-      {/* Running head: where and when this page is for. */}
-      <header className="mono flex items-baseline justify-between gap-3 border-b border-ink pb-1.5 text-[0.75rem] text-ink-2">
-        <span className="min-w-0 truncate">
-          <button
-            type="button"
-            onClick={props.onChangePlace}
-            className="link font-medium text-ink uppercase"
-            aria-label={`Location: ${place.name}. Change`}
-          >
-            {place.name}
-          </button>{' '}
-          <span className="hidden min-[360px]:inline">{latLon(place)}</span>
-        </span>
-        <span className="shrink-0 uppercase">{dateHead}</span>
-      </header>
-      <p className="mono mt-1.5 flex flex-wrap justify-end gap-x-4 gap-y-1 text-[0.75rem] text-ink-3">
-        <button
-          type="button"
-          onClick={props.onFamily}
-          aria-label={`Family settings: bedtime ${bedtimeLabel(family.bedtime)}, simple words ${simple ? 'on' : 'off'}`}
-          className="link"
-        >
-          Bedtime {bedtimeLabel(family.bedtime)}
-          {simple ? ' · simple words' : ''}
-        </button>
-        <button
-          type="button"
-          onClick={() => props.onNightMode(!props.nightMode)}
-          aria-pressed={props.nightMode}
-          aria-label="Red light: dim red keeps your eyes adjusted to the dark"
-          className="link"
-        >
-          Red light {props.nightMode ? 'on' : 'off'}
-        </button>
-      </p>
-
-      {/* 1. The answer. */}
-      <section aria-labelledby="answer" className="mt-4">
-        <h1 id="answer" className="mono-caps text-ink-2">
-          {model.kind === 'look-now' ? 'Up right now' : model.eyebrow}
-          {hero && heroIsTonight && (
-            <span className="mt-0.5 block text-ink">{stationLong(hero.noradId)}</span>
-          )}
-        </h1>
-
-        {model.headline && (
-          <p className="serif mt-3 text-[clamp(3.25rem,15vw,4.75rem)] leading-[0.95] text-balance">
-            {model.headline}
-          </p>
-        )}
-
-        {hero && !heroIsTonight ? (
+    <>
+      <FlightStage
+        place={place}
+        input={stageInput}
+        nowMs={nowMs}
+        catalog={props.catalog}
+        red={props.nightMode}
+        simple={simple}
+        labelledBy="answer"
+        head={
           <>
-            {other && model.kind === 'not-tonight' && (
-              <UpInstead
-                thing={other}
-                tz={tz}
-                onFindIt={props.onFindIt}
-                onPhotograph={props.onPhotograph}
-              />
-            )}
-            <p className="serif-i mt-3 text-[1.375rem] leading-snug text-ink-2">{model.sub}</p>
-            <button
-              type="button"
-              onClick={() => props.onFocus(hero)}
-              className="mono mt-5 block text-left text-[0.875rem]"
-            >
-              <span className="text-ink-3">Next · </span>
-              <span className="link text-station">
-                {dayLabel(hero.start.unixMs, nowMs, tz)} {formatTime(hero.start.unixMs, tz)} ·{' '}
-                {stationName(hero.noradId).short} →
+            {/* Running head: where and when this page is for. */}
+            <header className="mono flex items-baseline justify-between gap-3 border-b border-ink pb-1.5 text-[0.75rem] text-ink-2">
+              <span className="min-w-0 truncate">
+                <button
+                  type="button"
+                  onClick={props.onChangePlace}
+                  className="link font-medium text-ink uppercase"
+                  aria-label={`Location: ${place.name}. Change`}
+                >
+                  {place.name}
+                </button>{' '}
+                <span className="hidden min-[360px]:inline">{latLon(place)}</span>
               </span>
-            </button>
-          </>
-        ) : hero ? (
-          <>
-            <BigTime ms={hero.start.unixMs} tz={tz} />
-            {hero.start.unixMs > nowMs && dayLabel(hero.start.unixMs, nowMs, tz) === 'Today' && (
-              <p className="mono mt-2 text-[0.8125rem] text-ink-2">
-                {countdown(hero.start.unixMs - nowMs)}
-              </p>
-            )}
-            <p className="serif-i mt-4 text-[1.5rem] leading-[1.18] text-pretty">
-              <Emphasised text={pathSentence(hero, simple)} />
-            </p>
-
-            <div className="mt-6 grid grid-cols-1 items-start gap-4 min-[340px]:grid-cols-[150px_1fr]">
-              <PassChart
-                pass={hero}
-                sunsetAzDeg={passPeriod(hero, tz) === 'before-dawn' ? null : sunsetAz(hero)}
-                formatMinute={minuteOf}
-                label={chartLabel(hero)}
-              />
-              <Directions
-                pass={hero}
-                sunsetAz={sunsetAz(hero)}
-                dawn={passPeriod(hero, tz) === 'before-dawn'}
-                simple={simple}
-              />
-            </div>
-
-            <p className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-[1rem]">
-              <button type="button" onClick={props.onFindIt} className="link text-station">
-                Find it in the sky →
-              </button>
-              <CalendarButton pass={hero} placeName={place.name} timeZone={tz} />
-              <button type="button" onClick={() => setWave(hero)} className="link">
-                Their view
-              </button>
-            </p>
-            {model.kind === 'focus' && (
+              <span className="shrink-0 uppercase">{dateHead}</span>
+            </header>
+            <p className="mono mt-1.5 flex flex-wrap justify-end gap-x-4 gap-y-1 text-[0.75rem] text-ink-2">
               <button
                 type="button"
-                onClick={() => props.onFocus(null)}
-                className="link mono mt-4 block text-[0.8125rem] text-ink-2"
+                onClick={props.onFamily}
+                aria-label={`Family settings: bedtime ${bedtimeLabel(family.bedtime)}, simple words ${simple ? 'on' : 'off'}`}
+                className="link"
               >
-                ← Back to tonight
+                Bedtime {bedtimeLabel(family.bedtime)}
+                {simple ? ' · simple words' : ''}
               </button>
-            )}
-          </>
-        ) : (
-          <>
-            {other && (
-              <UpInstead
-                thing={other}
-                tz={tz}
-                onFindIt={props.onFindIt}
-                onPhotograph={props.onPhotograph}
-              />
-            )}
-            <p className="serif-i mt-3 text-[1.375rem] text-ink-2">
-              No good passes in the next week{other ? '.' : '. A quiet sky tonight.'}
+              <button
+                type="button"
+                onClick={() => props.onNightMode(!props.nightMode)}
+                aria-pressed={props.nightMode}
+                aria-label="Red light: dim red keeps your eyes adjusted to the dark"
+                className="link"
+              >
+                Red light {props.nightMode ? 'on' : 'off'}
+              </button>
             </p>
           </>
-        )}
-        {model.late && (
-          <LateNote pass={model.late} tz={tz} onOpen={() => props.onFocus(model.late ?? null)} />
-        )}
-      </section>
+        }
+        ground={
+          // 1. The answer, standing on the ground under tonight's sky
+          // (clear of the compass letters just under the horizon).
+          <div className="pt-8">
+            <h1 id="answer" className="mono-caps text-ink-2">
+              {model.kind === 'look-now' ? 'Up right now' : model.eyebrow}
+              {hero && heroIsTonight && (
+                <span className="mt-0.5 block text-ink">{stationLong(hero.noradId)}</span>
+              )}
+            </h1>
+            {model.headline && (
+              <p className="serif mt-2 text-[clamp(2.75rem,13vw,4.75rem)] leading-[0.95] text-balance">
+                {model.headline}
+              </p>
+            )}
+            {hero && heroIsTonight ? (
+              <>
+                <BigTime ms={hero.start.unixMs} tz={tz} stage />
+                {hero.start.unixMs > nowMs &&
+                  dayLabel(hero.start.unixMs, nowMs, tz) === 'Today' && (
+                    <p className="mono mt-1.5 text-[0.8125rem] text-ink-2">
+                      {countdown(hero.start.unixMs - nowMs)}
+                    </p>
+                  )}
+                <p className="serif-i mt-2.5 text-[clamp(1.1875rem,5vw,1.5rem)] leading-[1.18] text-pretty">
+                  <Emphasised text={pathSentence(hero, simple)} />
+                </p>
+              </>
+            ) : !hero ? (
+              <p className="serif-i mt-3 text-[1.375rem] text-ink-2">
+                No good passes in the next week{other ? '.' : '. A quiet sky tonight.'}
+              </p>
+            ) : null}
+          </div>
+        }
+      />
 
-      {/* 2. The night, as a ruled table. */}
-      {night && (
-        <section aria-labelledby="the-night" className="mt-10">
-          <h2
-            id="the-night"
-            className="mono-caps flex justify-between border-b border-ink pb-1.5 text-ink-2"
-          >
-            <span>{nightTitle(night.startMs, nowMs, tz)}</span>
-            <span className="text-ink-3">Tap a line</span>
-          </h2>
-          <ul>
-            {night.stops.map((s) => (
-              <li key={s.id} className="border-b border-rule">
-                <StopRow
-                  stop={s}
+      <main className="mx-auto max-w-[36rem] px-5 pt-6 pb-28">
+        <section aria-label="How to see it" className="rule-in border-t border-ink pt-4">
+          {hero && !heroIsTonight ? (
+            <>
+              {other && model.kind === 'not-tonight' && (
+                <UpInstead
+                  thing={other}
                   tz={tz}
-                  placeName={place.name}
-                  nowMs={nowMs}
-                  sunsetAz={night.night.evening.sunsetAzDeg}
-                  minuteOf={minuteOf}
-                  simple={simple}
-                  onWave={setWave}
                   onFindIt={props.onFindIt}
                   onPhotograph={props.onPhotograph}
                 />
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {/* 3. The next good evenings. */}
-      <section aria-labelledby="later" className="mt-10">
-        <h2 id="later" className="mono-caps border-b border-ink pb-1.5 text-ink-2">
-          Later this week
-        </h2>
-        <ul>
-          {later.map((p) => (
-            <li key={passKey(p)} className="border-b border-rule">
+              )}
+              <p className="serif-i mt-3 text-[1.375rem] leading-snug text-ink-2">{model.sub}</p>
               <button
                 type="button"
-                onClick={() => props.onFocus(p)}
-                className="grid w-full grid-cols-[4.25rem_1fr_auto] items-baseline gap-3 py-2.5 text-left"
+                onClick={() => props.onFocus(hero)}
+                className="mono mt-5 block text-left text-[0.875rem]"
               >
-                <span className="mono text-[0.8125rem] text-ink-2">
-                  {weekdayShort(p.start.unixMs, tz)} {minuteOf(p.start.unixMs)}
-                </span>
-                <span className="text-station">{stationName(p.noradId).short}</span>
-                <span className="mono text-[0.75rem] text-ink-3">
-                  {compass8(p.start.azDeg)}→{compass8(p.end.azDeg)}
+                <span className="text-ink-3">Next · </span>
+                <span className="link text-station">
+                  {dayLabel(hero.start.unixMs, nowMs, tz)} {formatTime(hero.start.unixMs, tz)} ·{' '}
+                  {stationName(hero.noradId).short} →
                 </span>
               </button>
-            </li>
-          ))}
-          {!later.length && (
-            <li className="border-b border-rule py-2.5 text-ink-2">
-              No more good evening passes this week.
-            </li>
-          )}
-        </ul>
-        <button type="button" onClick={props.onWeek} className="link mt-4 block text-[1rem]">
-          Every pass this week →
-        </button>
-        <TwoWeeksLink
-          passes={forecast.passes}
-          placeName={place.name}
-          timeZone={tz}
-          bedtime={family.bedtime}
-          nowMs={nowMs}
-        />
-      </section>
+            </>
+          ) : hero ? (
+            <>
+              <div className="grid grid-cols-1 items-start gap-4 min-[340px]:grid-cols-[150px_1fr]">
+                <PassChart
+                  pass={hero}
+                  sunsetAzDeg={passPeriod(hero, tz) === 'before-dawn' ? null : sunsetAz(hero)}
+                  formatMinute={minuteOf}
+                  label={chartLabel(hero)}
+                />
+                <Directions
+                  pass={hero}
+                  sunsetAz={sunsetAz(hero)}
+                  dawn={passPeriod(hero, tz) === 'before-dawn'}
+                  simple={simple}
+                />
+              </div>
 
-      <div className="mt-10 space-y-8">
-        {hero && (
-          <DataAge
-            epochMs={forecast.elements.find((e) => e.noradId === hero.noradId)?.epochMs ?? nowMs}
+              <p className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-[1rem]">
+                <button type="button" onClick={props.onFindIt} className="link text-station">
+                  Find it in the sky →
+                </button>
+                <CalendarButton pass={hero} placeName={place.name} timeZone={tz} />
+                <button type="button" onClick={() => setWave(hero)} className="link">
+                  Their view
+                </button>
+              </p>
+              {model.kind === 'focus' && (
+                <button
+                  type="button"
+                  onClick={() => props.onFocus(null)}
+                  className="link mono mt-4 block text-[0.8125rem] text-ink-2"
+                >
+                  ← Back to tonight
+                </button>
+              )}
+            </>
+          ) : (
+            other && (
+              <UpInstead
+                thing={other}
+                tz={tz}
+                onFindIt={props.onFindIt}
+                onPhotograph={props.onPhotograph}
+              />
+            )
+          )}
+          {model.late && (
+            <LateNote pass={model.late} tz={tz} onOpen={() => props.onFocus(model.late ?? null)} />
+          )}
+        </section>
+
+        {/* 2. The night, as a ruled table. */}
+        {night && (
+          <section aria-labelledby="the-night" className="mt-10">
+            <h2
+              id="the-night"
+              className="mono-caps flex justify-between border-b border-ink pb-1.5 text-ink-2"
+            >
+              <span>{nightTitle(night.startMs, nowMs, tz)}</span>
+              <span className="text-ink-3">Tap a line</span>
+            </h2>
+            <ul>
+              {night.stops.map((s) => (
+                <li key={s.id} className="border-b border-rule">
+                  <StopRow
+                    stop={s}
+                    tz={tz}
+                    placeName={place.name}
+                    nowMs={nowMs}
+                    sunsetAz={night.night.evening.sunsetAzDeg}
+                    minuteOf={minuteOf}
+                    simple={simple}
+                    onWave={setWave}
+                    onFindIt={props.onFindIt}
+                    onPhotograph={props.onPhotograph}
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* 3. The next good evenings. */}
+        <section aria-labelledby="later" className="mt-10">
+          <h2 id="later" className="mono-caps border-b border-ink pb-1.5 text-ink-2">
+            Later this week
+          </h2>
+          <ul>
+            {later.map((p) => (
+              <li key={passKey(p)} className="border-b border-rule">
+                <button
+                  type="button"
+                  onClick={() => props.onFocus(p)}
+                  className="grid w-full grid-cols-[4.25rem_1fr_auto] items-baseline gap-3 py-2.5 text-left"
+                >
+                  <span className="mono text-[0.8125rem] text-ink-2">
+                    {weekdayShort(p.start.unixMs, tz)} {minuteOf(p.start.unixMs)}
+                  </span>
+                  <span className="text-station">{stationName(p.noradId).short}</span>
+                  <span className="mono text-[0.75rem] text-ink-3">
+                    {compass8(p.start.azDeg)}→{compass8(p.end.azDeg)}
+                  </span>
+                </button>
+              </li>
+            ))}
+            {!later.length && (
+              <li className="border-b border-rule py-2.5 text-ink-2">
+                No more good evening passes this week.
+              </li>
+            )}
+          </ul>
+          <button type="button" onClick={props.onWeek} className="link mt-4 block text-[1rem]">
+            Every pass this week →
+          </button>
+          <TwoWeeksLink
+            passes={forecast.passes}
+            placeName={place.name}
+            timeZone={tz}
+            bedtime={family.bedtime}
             nowMs={nowMs}
           />
-        )}
-        <TakeItOutside />
-      </div>
-      <Footer />
+        </section>
 
-      {wave && (
-        <Suspense fallback={null}>
-          <WaveBack
-            pass={wave}
-            place={place}
-            catalog={props.catalog}
-            red={props.nightMode}
-            onClose={() => setWave(null)}
-          />
-        </Suspense>
-      )}
-    </main>
+        <div className="mt-10 space-y-8">
+          {hero && (
+            <DataAge
+              epochMs={forecast.elements.find((e) => e.noradId === hero.noradId)?.epochMs ?? nowMs}
+              nowMs={nowMs}
+            />
+          )}
+          <TakeItOutside />
+        </div>
+        <Footer />
+
+        {wave && (
+          <Suspense fallback={null}>
+            <WaveBack
+              pass={wave}
+              place={place}
+              catalog={props.catalog}
+              red={props.nightMode}
+              onClose={() => setWave(null)}
+            />
+          </Suspense>
+        )}
+      </main>
+    </>
   )
 }
 
@@ -354,10 +398,12 @@ function nightTitle(startMs: number, nowMs: number, tz: string): string {
 }
 
 /** The time as the page's headline: serif figures, a small italic "pm". */
-export function BigTime({ ms, tz }: { ms: number; tz: string }) {
+export function BigTime({ ms, tz, stage }: { ms: number; tz: string; stage?: boolean }) {
   const { clock, period } = timeParts(ms, tz)
+  // On the Flight's stage the time shares the ground with the sentence.
+  const size = stage ? 'text-[clamp(4.25rem,22vw,8rem)]' : 'text-[clamp(6rem,35vw,9rem)]'
   return (
-    <p className="serif tnum mt-2 -ml-1 text-[clamp(6rem,35vw,9rem)] leading-[0.82] tracking-[-0.02em]">
+    <p className={`serif tnum mt-2 -ml-1 ${size} leading-[0.82] tracking-[-0.02em]`}>
       <span>{clock}</span>
       {period && (
         <span className="serif-i ml-1.5 text-[0.26em] tracking-normal text-ink-2">
@@ -629,4 +675,27 @@ function UpInstead({
       </p>
     </div>
   )
+}
+
+/** Where the "up instead" thing really is (not where to face), for the Flight's ring. */
+function otherInSky(t: OtherThing): { azDeg: number; elDeg: number; atMs: number; label: string } {
+  const s = t.stop
+  switch (t.kind) {
+    case 'moon':
+      return { azDeg: t.stop.moon.azDeg, elDeg: t.stop.moon.elDeg, atMs: s.atMs, label: 'Moon' }
+    case 'planet':
+      return {
+        azDeg: t.stop.planet.azDeg,
+        elDeg: t.stop.planet.elDeg,
+        atMs: s.atMs,
+        label: PLANET_NAMES[t.stop.planet.id] ?? t.stop.planet.id,
+      }
+    case 'meteor':
+      return {
+        azDeg: t.stop.shower.radiantAzDeg,
+        elDeg: t.stop.shower.radiantElDeg,
+        atMs: s.atMs,
+        label: t.stop.shower.name,
+      }
+  }
 }

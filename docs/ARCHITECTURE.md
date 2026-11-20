@@ -71,7 +71,8 @@ docs/            product, architecture, decisions, learn chapters, growth assets
 ## Performance budget
 - **Initial route:** under **150 KB gzipped JS**, enforced by `scripts/check-bundle-size.mjs` in CI.
 - **Lighthouse mobile:** ≥90 in performance, accessibility, best practices and SEO, enforced by `lighthouserc.json` in CI.
-- **Lazy loads:** the city index, share-card renderer (canvas + QR + font subset), WebGL view, and .ics generator.
+- **Lazy loads:** the city index, share-card renderer (canvas + QR + font subset), the Flight's WebGL film, and .ics generator.
+- **The Flight** (D-033): the film chunk has its own budget of **40 KB gzipped** (now 8.3 KB), also enforced by `check-bundle-size.mjs`. Its code loads when the browser is idle; the GPU context starts on the first touch, scroll or key, so Lighthouse (which never touches the page) measures the 2D first paint. It draws **on demand** (scroll, resize, new data), never in a loop, and not while offscreen. Device pixel ratio is capped at 1.5 on phones.
 - **First paint:** the 3-second answer must render from cached elements and a cached place before any lazy chunk loads. Phase 3 pre-renders HTML for the default place so first paint already has an answer.
 
 ## Privacy architecture

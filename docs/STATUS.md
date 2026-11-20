@@ -1,6 +1,6 @@
 # Status
 
-_Last updated: 2026-11-06, Phase 3a (Family night) in review, stacked on Phase 2.9 (PR #11)._
+_Last updated: 2026-11-19, Phase 3c (The Flight) in review, stacked on Phase 3a (PR #12) and Phase 2.9 (PR #11)._
 
 ## Done
 ### Phase 1: Foundation (merged)
@@ -111,6 +111,20 @@ Public repo, CI, the Pages deploy at https://skypassalert.com (HTTPS enforced, w
 - **Wording fix:** passes that end because dawn brightens the sky no longer say "sets".
 - **Numbers:** 273 tests; initial JS 106.7 KB (budget 150); forecast 15 days in ~0.2 s; Lighthouse 97 / 100 / 100 / 100 on `/`, 100 ×4 on `/privacy/` and `/about/`.
 
+### Phase 3c: The Flight (2026-11-19, PR in review; D-033)
+- **The top of Tonight is a 3D film you scroll**, after two reference reels Ishaan sent. Scroll is the clock:
+  - stand in your yard facing where the pass begins;
+  - play the real pass across the real sky;
+  - rise to orbit to see you in darkness and the station in sunlight.
+  - On pass-free nights it scrubs dusk into dark and follows the "Up instead" object.
+- **Built from scratch in WebGL2** (no library): an analytic Earth/sky/space ray tracer, real stars, coastlines, the orbit in sunlight and shadow, a ribbon for the pass, DOM labels placed by the same maths. Drawn only when you scroll.
+- **Scrub rail** (slider, keyboard), docked clock line, one caption per beat, red light throughout.
+- **Fallbacks:** the 2D sky picture scrubs on its own if the GPU won't start; low-memory phones and browsers without WebGL2 get one still screen; reduced motion holds one frame and cuts to orbit.
+- **Also:** tabs cross-fade; paper rules draw across as they scroll in.
+- **Learn chapter 16** (one world in km, scroll as clock, the exponential climb, the float32 trap in ray–sphere tests).
+- **Numbers:** 300 tests; initial JS 113.8 KB (budget 150); Flight chunk 8.3 KB (own budget 40).
+- **Needs a real phone:** scroll feel and frame rate on an iPhone and a mid-range Android, the rail with a thumb, and red light outdoors.
+
 ## Next: Phase 3b (MVP v0.1, continued)
 - zh-Hans: move all copy into a catalog, then translate, marked needs-native-review.
 - Pre-rendered first paint for the default place.
@@ -127,6 +141,8 @@ Public repo, CI, the Pages deploy at https://skypassalert.com (HTTPS enforced, w
 | Ishaan | **Check the meteor table:** open the IMO 2026 calendar (imo.net, "Meteor Shower Calendar 2026", Table 5) and compare its dates, λ☉, radiants and ZHRs with `src/engine/meteors/showers.ts`. We couldn't extract the PDF text here. |
 | Ishaan | **Leonids, night of 16–17 Nov:** step out before dawn, count meteors for 15 minutes, compare with the app's range, and note it in `FIELD_LOG.md`. |
 | Ishaan | On a phone: set a bedtime, turn on simple words, and add the next 2 weeks to the calendar. Check that the alarms appear. |
+| **Ishaan** | **The Flight on real phones:** scroll the whole film on an iPhone and an Android (a cheaper one if you can). Note any stutter, the phone model, and whether the scrub rail is easy with a thumb. |
+| Ishaan | **Next ISS pass night:** compare where the film's station fades into Earth's shadow with where it actually fades for you. Note it in `FIELD_LOG.md`. |
 | Parent | (From Phase 1, if not done) Porkbun email forwarding for `hello@skypassalert.com`. |
 | Ishaan (optional) | If you add a `main` ruleset requiring PRs, add **GitHub Actions** to its bypass list, or the Data workflow's commits will be rejected. |
 

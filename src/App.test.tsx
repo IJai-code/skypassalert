@@ -41,14 +41,19 @@ describe('the app', () => {
   it('Tonight leads with the best pass: time, object, path and actions', async () => {
     render(<App />)
     expect(await screen.findByRole('heading', { name: /tonight in fremont/i })).toBeInTheDocument()
+    // The answer stands on the stage: time, station, path.
     const hero = screen.getByRole('region', { name: /tonight in fremont/i })
     expect(within(hero).getByText('7:32', { selector: 'p > span' })).toBeInTheDocument()
-    expect(within(hero).getByRole('img', { name: /sky chart of the path/i })).toBeInTheDocument()
     expect(within(hero).getByText(/tiangong, china’s space station/i)).toBeInTheDocument()
     expect(within(hero).getByText(/rises low in the west-southwest/i)).toBeInTheDocument()
-    expect(within(hero).getByRole('button', { name: /find it in the sky/i })).toBeInTheDocument()
-    expect(within(hero).getByRole('button', { name: /remind me/i })).toBeInTheDocument()
-    expect(within(hero).getByRole('button', { name: /their view/i })).toBeInTheDocument()
+    // Without WebGL (jsdom), the stage is one still screen: no scrub rail.
+    expect(within(hero).queryByRole('slider')).not.toBeInTheDocument()
+    // The chart, the cues and the actions follow it on the page.
+    const how = screen.getByRole('region', { name: /how to see it/i })
+    expect(within(how).getByRole('img', { name: /sky chart of the path/i })).toBeInTheDocument()
+    expect(within(how).getByRole('button', { name: /find it in the sky/i })).toBeInTheDocument()
+    expect(within(how).getByRole('button', { name: /remind me/i })).toBeInTheDocument()
+    expect(within(how).getByRole('button', { name: /their view/i })).toBeInTheDocument()
   })
 
   it('sets the night as a table: sunset, the pass, sunrise, each line opening', async () => {
@@ -69,15 +74,15 @@ describe('the app', () => {
   it('explains how to find a pass, anchored to sunset', async () => {
     render(<App />)
     await screen.findByRole('heading', { name: /tonight in fremont/i })
-    const hero = screen.getByRole('region', { name: /tonight in fremont/i })
-    expect(within(hero).getByText(/where the sun went down/i)).toBeInTheDocument()
+    const how = screen.getByRole('region', { name: /how to see it/i })
+    expect(within(how).getByText(/where the sun went down/i)).toBeInTheDocument()
   })
 
   it('shows the pass from the station: Earth below, why you can see it', async () => {
     render(<App />)
     await screen.findByRole('heading', { name: /tonight in fremont/i })
-    const hero = screen.getByRole('region', { name: /tonight in fremont/i })
-    fireEvent.click(within(hero).getByRole('button', { name: /their view/i }))
+    const how = screen.getByRole('region', { name: /how to see it/i })
+    fireEvent.click(within(how).getByRole('button', { name: /their view/i }))
     const dialog = await screen.findByRole('dialog', { name: /looking down from tiangong/i })
     expect(await within(dialog).findByText(/km up, above/i)).toBeInTheDocument()
     expect(within(dialog).getByText(/the sun is still shining on it/i)).toBeInTheDocument()
@@ -120,8 +125,8 @@ describe('the app', () => {
     await screen.findByRole('heading', { name: /tonight in fremont/i })
     let results = await axe.run(container, opts)
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([])
-    const hero = screen.getByRole('region', { name: /tonight in fremont/i })
-    fireEvent.click(within(hero).getByRole('button', { name: /their view/i }))
+    const how = screen.getByRole('region', { name: /how to see it/i })
+    fireEvent.click(within(how).getByRole('button', { name: /their view/i }))
     await screen.findByRole('dialog')
     results = await axe.run(document.body, opts)
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([])
