@@ -7,6 +7,8 @@ import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
 
 const BUDGET_BYTES = 150 * 1024
+// The Flight's WebGL film loads on first touch; it has its own budget (D-033).
+const FILM_BUDGET_BYTES = 40 * 1024
 const dist = new URL('../dist/', import.meta.url).pathname
 
 const html = readFileSync(join(dist, 'index.html'), 'utf8')
@@ -39,5 +41,17 @@ for (const f of lazy) console.log(`lazy     ${kb(gz(`assets/${f}`)).padStart(9)}
 console.log(`\nInitial JS: ${kb(total)} gzipped (budget ${kb(BUDGET_BYTES)})`)
 if (total > BUDGET_BYTES) {
   console.error('Over budget. See docs/ARCHITECTURE.md#performance-budget.')
+  process.exit(1)
+}
+
+const film = lazy.filter((f) => /^Flight-[\w-]+\.js$/.test(f))
+if (film.length !== 1) {
+  console.error(`check-bundle-size: expected one Flight chunk, found ${film.length}`)
+  process.exit(1)
+}
+const filmSize = gz(`assets/${film[0]}`)
+console.log(`Flight film: ${kb(filmSize)} gzipped (budget ${kb(FILM_BUDGET_BYTES)})`)
+if (filmSize > FILM_BUDGET_BYTES) {
+  console.error('The Flight chunk is over budget. See docs/ARCHITECTURE.md#performance-budget.')
   process.exit(1)
 }

@@ -42,7 +42,7 @@ Original Phase 2 criteria:
 - [x] Learn chapters 01–07 (+ 09, 10) plus four `npm run lab:<name>` labs. GLOSSARY and DECISIONS updated.
 
 ## 3. MVP v0.1 LIVE
-Split into 3a (family night, done 2026-11-06) and 3b (zh-Hans, pre-render, device test, soft launch). See D-032.
+Split into 3a (family night, done 2026-11-06) and 3b (zh-Hans, pre-render, device test, soft launch). See D-032. 3c (The Flight, 2026-11-19, D-033) was added at Ishaan's direction: the top of Tonight as a scroll-driven 3D film.
 
 - **3-second rule:** best pass rendered with zero taps from the cached place.
 - **Places:** Fremont and Bay Area presets, geolocation (stays on device), in-browser GeoNames city search (lazy). Place picker in the header.

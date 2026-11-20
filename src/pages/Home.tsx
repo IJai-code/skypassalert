@@ -4,6 +4,7 @@
 // The forecast runs 15 days so "next two weeks" can go in one calendar file.
 // Docs: docs/DESIGN.md
 import { useEffect, useState } from 'react'
+import { flushSync } from 'react-dom'
 import type { ForecastPass } from '../engine/index.ts'
 import type { Place } from '../engine/place.ts'
 import { useForecast, useNow } from '../lib/hooks.ts'
@@ -54,9 +55,17 @@ export function Home() {
   // The live view needs motion access, which iOS only grants inside the tap.
   const go = async (t: Tab, mode: 'find' | 'camera' = 'find') => {
     if (t === 'sky' && tab !== 'sky') await requestMotionPermission()
-    if (t === 'sky') setSkyMode(mode)
-    setTab(t)
-    window.scrollTo({ top: 0 })
+    const swap = () => {
+      if (t === 'sky') setSkyMode(mode)
+      setTab(t)
+      window.scrollTo({ top: 0 })
+    }
+    // A short cross-fade between tabs where the browser can (D-033); instant elsewhere.
+    const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown }
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (doc.startViewTransition && !still && t !== tab)
+      doc.startViewTransition(() => flushSync(swap))
+    else swap()
   }
 
   const setPlace = (p: Place) => {

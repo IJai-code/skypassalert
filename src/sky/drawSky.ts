@@ -43,6 +43,8 @@ export type DrawOptions = {
   alwaysNight?: boolean
   /** Ring and label the thing being aimed at. */
   highlight?: { azDeg: number; elDeg: number; label: string } | null
+  /** Paint the ground this colour (the Flight's poster uses the page's paper). */
+  groundColor?: string
 }
 
 type Pal = {
@@ -68,11 +70,13 @@ const RED: Pal = {
   groundLine: 'rgba(150,36,28,0.5)',
 }
 
-/** Sky colours (zenith, horizon, glow) for a Sun altitude: day → civil → nautical → night. */
-export function skyColors(sunAltDeg: number): {
-  zenith: string
-  horizon: string
-  glow: string
+/**
+ * Sky colours as numbers (0–255) for a Sun altitude: day → civil → nautical →
+ * night. Shared by the 2D sky and the Flight's shader.
+ */
+export function skyRgb(sunAltDeg: number): {
+  zenith: [number, number, number]
+  horizon: [number, number, number]
   glowStrength: number
 } {
   const stops: Array<[number, [number, number, number], [number, number, number]]> = [
@@ -89,14 +93,28 @@ export function skyColors(sunAltDeg: number): {
   const [a0, z0, h0] = stops[i]!
   const [a1, z1, h1] = stops[i + 1]!
   const f = (a0 - a) / (a0 - a1)
-  const lerp = (p: number[], q: number[]) => p.map((v, k) => Math.round(v + (q[k]! - v) * f))
-  const z = lerp(z0, z1)
-  const h = lerp(h0, h1)
+  const lerp = (p: number[], q: number[]) =>
+    p.map((v, k) => Math.round(v + (q[k]! - v) * f)) as [number, number, number]
   return {
-    zenith: `rgb(${z.join(',')})`,
-    horizon: `rgb(${h.join(',')})`,
-    glow: 'rgba(255,170,110,1)',
+    zenith: lerp(z0, z1),
+    horizon: lerp(h0, h1),
     glowStrength: Math.max(0, Math.min(1, (sunAltDeg + 14) / 14)) * (sunAltDeg > 2 ? 0.4 : 1),
+  }
+}
+
+/** Sky colours (zenith, horizon, glow) for a Sun altitude, as CSS colours. */
+export function skyColors(sunAltDeg: number): {
+  zenith: string
+  horizon: string
+  glow: string
+  glowStrength: number
+} {
+  const c = skyRgb(sunAltDeg)
+  return {
+    zenith: `rgb(${c.zenith.join(',')})`,
+    horizon: `rgb(${c.horizon.join(',')})`,
+    glow: 'rgba(255,170,110,1)',
+    glowStrength: c.glowStrength,
   }
 }
 
@@ -112,7 +130,7 @@ const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const
 
 export function drawSky(ctx: CanvasRenderingContext2D, o: DrawOptions): void {
   const { vp, cam, scene } = o
-  const pal = o.red ? RED : PALETTE
+  const pal = { ...(o.red ? RED : PALETTE), ...(o.groundColor ? { ground: o.groundColor } : {}) }
   const W = vp.width
   const H = vp.height
   const P = (v: V3) => project(v, cam, vp)

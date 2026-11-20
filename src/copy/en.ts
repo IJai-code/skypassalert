@@ -245,3 +245,60 @@ export const METEOR_NOTE =
   'Meteor rates are rough: showers change from year to year and come in bursts. Lie back and be patient.'
 
 export const AFTER_BEDTIME = 'after bedtime'
+
+// ── The Flight (docs/learn/16-the-flight.md) ─────────────────────────────
+
+export const FLIGHT_COPY = {
+  rail: 'Scrub through the pass',
+  railDusk: 'Scrub through the evening',
+  you: 'You',
+}
+
+const km = (n: number) => `${(Math.round(n / 10) * 10).toLocaleString('en-US')} km`
+
+/** The sentence over the view from orbit: where it is, and why you can (or can't) see it. */
+export function flightOrbitCaption(o: {
+  station: string
+  time: string
+  heightKm: number
+  distanceKm: number
+  sunlit: number
+  yourSunDeg: number
+  simple?: boolean
+}): string {
+  const where = o.simple
+    ? `At ${o.time} the ${o.station} is ${km(o.heightKm)} up and ${km(o.distanceKm)} away from you.`
+    : `${o.time}. The ${o.station} is ${km(o.heightKm)} up and ${km(o.distanceKm)} from you.`
+  let why: string
+  if (o.sunlit < 0.5)
+    why = o.simple
+      ? 'Now it’s in Earth’s shadow, so no sunlight hits it and it disappears.'
+      : 'It has slipped into Earth’s shadow: no sunlight reaches it, so it vanishes from your sky.'
+  else if (o.yourSunDeg > -4)
+    why = o.simple
+      ? 'The Sun shines on it, but your sky is still too bright to see it.'
+      : 'It is in sunlight, but your sky is still too bright to pick it out.'
+  else
+    why = o.simple
+      ? 'It’s dark where you are, but the Sun still shines on it up there. That’s the light you see.'
+      : 'You are in the dark, but up there the Sun still shines on it. That reflected sunlight is what you see.'
+  return `${where} ${why}`
+}
+
+/** How dark the sky is at a Sun altitude, for the scrub through a pass-free evening. */
+export function duskCaption(sunAltDeg: number, simple = false): string {
+  if (sunAltDeg > 0) return 'The Sun is still up.'
+  if (sunAltDeg > -6)
+    return simple
+      ? 'Just after sunset: only the Moon and the brightest planets show.'
+      : 'Civil twilight: only the Moon and the brightest planets show.'
+  if (sunAltDeg > -12)
+    return simple
+      ? 'Getting dark: the brightest stars come out.'
+      : 'Nautical twilight: the brightest stars come out, one by one.'
+  if (sunAltDeg > -18)
+    return simple ? 'Almost fully dark.' : 'Astronomical twilight: almost fully dark.'
+  return simple
+    ? 'Fully dark. From a town you can see a few hundred stars.'
+    : 'Full dark. From a town sky, a few hundred stars.'
+}
