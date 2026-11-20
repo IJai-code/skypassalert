@@ -7,13 +7,13 @@ How SkyPassAlert looks, sounds and behaves, and why. Every rule traces to someth
 
 <a id="almanac"></a>
 <a id="flight"></a>
-- **The Flight** (`src/ui/flight/`, D-033): the top of Tonight is a film you scroll. A sticky full-screen stage shows the real sky from your yard at the pass's start, with the answer set **on the ground** below the horizon (the ground is the page's paper, so no text sits on the drawing).
-  - **Scroll is the clock.** The pass plays as you scroll (linear in time); the camera turns with the station; the big time docks into a serif clock line at the top ("7:34 pm · west-northwest, 2 fists up").
-  - **Lift-off:** the camera climbs to 5,000 km, watching the station, then looks down on you both: coastlines as cream hairlines, Earth's edge as one hairline, the orbit amber in sunlight and grey in shadow, a line of sight, "You" and the station's name in mono. One italic sentence says why you can see it.
+- **The Flight** (`src/ui/flight/`, D-033, D-034): the top of Tonight is a 3D film that **opens in orbit** and that you scroll down into your sky.
+  - **Opening shot** (first frame, no tap): Earth fills the lower screen with its sunlit edge glowing across the middle, the camera facing the Sun. Night side with city lights, your town marked "You · Fremont", the stations on their real orbits (amber ribbons, grey through Earth's shadow). The answer stands in space above in big serif type (the time up to 10rem), rising in line by line. One italic caption at the bottom says why you'll see it. Bloom on everything bright; a short intro and a slow drift for 20 s.
+  - **Dive:** scrolling drops the camera from orbit over your town's lights, out at the flattening horizon, then up into your sky at the pass's start. The answer docks into a serif clock line at the top.
+  - **The pass** plays as you scroll (linear in time), the camera turning with the station; compass letters and minute times as mono labels; the shadow-entry caption at the end.
   - **Scrub rail:** a minute ruler down the right edge (slider; arrow keys, drag). It moves the page, so scroll stays the one clock.
-  - **Captions:** one italic sentence per beat, swapped with a 200 ms fade, never looping.
-  - **No-pass nights:** the film scrubs sunset into dark (captions name the twilight stage) and rings the "Up instead" object, following it as the sky turns.
-  - **Fallbacks:** the 2D `drawSky` picture is the first paint and scrubs on its own if the GPU won't start; no WebGL2 or a low-memory phone gets one still screen; reduced motion holds one wide frame and cuts to orbit.
+  - **No-pass nights:** the opening shows both stations live; the dive lands in dusk, which scrubs into dark with the "Up instead" object ringed and followed as the sky turns. Captions name the twilight stage.
+  - **Fallbacks:** the 2D `drawSky` picture scrubs on its own where the GPU can't run the film (no WebGL2, low memory, software rendering); reduced motion holds still frames and cuts instead of flying.
 - **Tonight tab** (`src/ui/night/AlmanacPage.tsx`), top to bottom:
   - **Running head** (over the top of the stage): place (a link to change it), coordinates, date, over a cream rule. Under it: "Bedtime 9:30 pm" (opens the family sheet; adds "· simple words" when on) and "Red light off/on".
   - **The answer** (3-second rule, on the stage's ground): a mono kicker "Tonight in Fremont, CA" with the station's full name; the time in Instrument Serif (up to 8rem on the stage) with an italic "pm"; a mono countdown; the path sentence in italic with its key phrase ("almost straight overhead") in amber.
@@ -64,7 +64,7 @@ Real data that shaped the product: this week in Fremont, every visible ISS pass 
 ## 2. Principles
 1. **Answer first.** The top of the screen is a sentence a parent can act on in three seconds.
 2. **Computed, never decorative.** Every graphic (sky map, tonight strip, brightness dots) is drawn from the real prediction. If it doesn't encode data, it doesn't ship.
-3. **Calm.** Hairlines, not boxes. Hierarchy from size and weight. Motion only along real time or real geometry, and only when you move it (D-033): the Flight follows your scroll, nothing plays by itself.
+3. **Calm.** Hairlines, not boxes. Hierarchy from size and weight. Motion only along real time or real geometry (D-033, D-034): the Flight follows your scroll; its opening shot may move on its own for 20 seconds (a short intro, a slow drift), then holds still.
 4. **Honest.** Data age on every prediction. Examples are labelled as examples. Low, faint passes stay listed but recede visually.
 5. **Human units.** Fists at arm's length (~10°), "where the sun went down", "brighter than any star".
 

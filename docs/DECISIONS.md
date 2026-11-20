@@ -281,3 +281,19 @@ Node 22.18+ strips TypeScript types natively. Labs (`scripts/labs/*.ts`) import 
 - **Also:** tab changes cross-fade (View Transitions, 180 ms, off under reduced motion); paper rules draw across once as they scroll into view (CSS scroll timeline, where supported).
 - **Budgets:** initial JS 113.8 KB (+7 KB for the stage, rail and camera maths); film chunk 8.3 KB against its own 40 KB budget, enforced in `check-bundle-size.mjs`.
 - **Not done (yet):** the shared-element morph of the station's time between Tonight and Week (plain cross-fade for now), and a 600 ms re-aim when switching passes (it cuts instead, which reads better than gliding through the wrong pass).
+
+## D-034 The Flight opens in orbit: a lit globe, bloom, motion from the first frame (2026-11-19)
+- **Context:** after D-033 went live, Ishaan saw "virtually no change" and was right. The film only started after a touch, the dramatic part (orbit) only played on pass nights and only at the end, and everything was drawn as dim hairlines under our old "calm, no glow" rules. The reference reels open on a striking, moving 3D scene with big type, and so must we.
+- **Choice:**
+  - **Open in orbit, from the first frame.** Earth fills the lower screen, its sunlit edge glowing across the middle. The camera looks towards the Sun, so the air's blue and orange edge and the Sun itself (with bloom) are in frame. Your town is marked ("You · Fremont"), and the stations are on their real orbits: at the pass's start on pass nights, live right now on the others. The answer stands in space above, in big serif type that rises in line by line.
+  - **Scroll dives.** From orbit, down over your town's lights, out at the flattening horizon, then up into your sky at the pass's start (or at dusk), where the pass plays as before.
+  - **The globe is painted from our own data:** land and sea from Natural Earth (tinted by latitude), city lights from the GeoNames cities we already ship (`scripts/build-lights.mjs` → `lights.json`, 31 KB gzipped), the Sun's glint on water, a soft terminator, the air's rim. No photos, no downloads.
+  - **Bloom:** the frame is drawn anti-aliased offscreen; its bright parts are blurred and added back, so city lights, the Sun, the air and the station glow like they do to a camera.
+  - **Motion:** a 1.6 s intro (the globe fades up as the camera settles in) and a slow ±6° drift around your town for the first 20 seconds, then still. Off under reduced motion.
+- **Rules amended:** DESIGN §2.3 now allows ambient motion in the opening shot (time-limited, computed geometry only). The no-purple, no-glass, no-decoration rules stand: every glow is light from something real.
+- **Where it doesn't run:**
+  - No WebGL2, ≤ 2 GB RAM or ≤ 2 cores: the still 2D sky, as before.
+  - **Software-rendered WebGL** (SwiftShader, llvmpipe, Microsoft Basic Render): the 2D sky that scrubs. These can't trace and bloom a globe at a usable frame rate. Headless lab browsers run this way, so **Lighthouse measures the 2D version**, not the film; real-phone frame rates are a human test.
+- **Bugs caught on the way:**
+  - The animation loop scheduled two frames per frame (they doubled until the page hung). It now asks for one at a time.
+  - A remount kept a "textures requested" marker, so the second GPU context never got its textures. The marker is now per context.

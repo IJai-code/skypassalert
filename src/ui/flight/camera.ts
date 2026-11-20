@@ -195,6 +195,9 @@ export function groundCamera(rig: GroundRig, t: number, s: Screen, follow: numbe
   }
 }
 
+/** Beats where the yard camera holds the opening view (it's where the dive lands). */
+const OPENING_BEATS = new Set(['tonight', 'orbit', 'dive'])
+
 /**
  * The camera on the ground for a moment of the film: facing the opening view,
  * turning with the station, or (reduced motion) holding one wide frame.
@@ -223,7 +226,7 @@ export function groundView(
       ...orient(enu(face.azDeg, pitch0 + k * (target - pitch0)), [0, 0, 1]),
     }
   }
-  if (a.beat === 'tonight') return groundCamera(rig, a.clockMs, s, 0)
+  if (OPENING_BEATS.has(a.beat)) return groundCamera(rig, a.clockMs, s, 0)
   if (!a.follow) return wideCamera(rig, s)
   const follow = a.beat === 'pass' ? smoothstep(0, 0.18, a.u) : 1
   return groundCamera(rig, a.clockMs, s, follow)
@@ -244,36 +247,40 @@ export function wideCamera(rig: GroundRig, s: Screen): Cam {
 
 // ---------------------------------------------------------------- orbit
 
-const ORBIT_ALT_KM = 5000
-const ORBIT_VFOV = 60
-/** Tilt from straight down towards the station, so Earth's edge shows at the top. */
-const ORBIT_TILT_DEG = 6
+/** Opening shot: two Earth radii from the centre (one up), so the globe fills the lower screen. */
+const OPENING_DISTANCE_R = 2
+/** How far "behind" you the camera sits (as seen from Earth's centre), degrees. */
+const OPENING_BEHIND_DEG = 14
 
 /**
- * High above the point halfway between you and the station, looking down,
- * with "up" on the screen pointing from you towards it. You end up low in the
- * frame, the station above you, and Earth's curved edge across the top.
+ * The film's first frame: high above and a little behind your town, looking
+ * past it the way you'll face tonight. Earth fills the lower part of the
+ * screen with its glowing edge across the middle, space and the answer above.
+ * `driftDeg` swings the camera slowly around your town; `zoom` > 1 starts it
+ * farther out (the intro).
  */
-export function orbitCamera(w: World, station: V3, fallbackAzDeg: number): Cam {
-  const you: V3 = [0, 0, 1]
-  const under = unit(sub(station, w.centre))
-  const mid = unit(add(you, under))
-  let towards = sub(under, scale(mid, dot(under, mid)))
-  if (Math.hypot(...towards) < 1e-4) towards = enu(fallbackAzDeg, 0)
-  towards = unit(towards)
-  const eye = add(w.centre, scale(mid, w.R + ORBIT_ALT_KM))
-  const forward = unit(
-    add(scale(mid, -Math.cos(ORBIT_TILT_DEG * D)), scale(towards, Math.sin(ORBIT_TILT_DEG * D))),
-  )
-  return { eye, eyeAlt: ORBIT_ALT_KM, vfovDeg: ORBIT_VFOV, ...orient(forward, towards) }
+export function openingCamera(w: World, faceAz: number, s: Screen, driftDeg = 0, zoom = 1): Cam {
+  const vfov = s.height >= s.width ? 60 : 46
+  const ahead = enu(faceAz + driftDeg, 0)
+  const b = OPENING_BEHIND_DEG * D
+  const eyeDir: V3 = unit([-ahead[0] * Math.sin(b), -ahead[1] * Math.sin(b), Math.cos(b)])
+  const dist = w.R * OPENING_DISTANCE_R * zoom
+  const eye = add(w.centre, scale(eyeDir, dist))
+  const toCentre = unit(sub(w.centre, eye))
+  const screenUp = unit(sub(ahead, scale(toCentre, dot(ahead, toCentre))))
+  // Tilt up from Earth's centre so its top edge lands 42% down the screen.
+  const radius = Math.asin(w.R / dist)
+  const edgeAbove = Math.atan((0.5 - 0.42) * 2 * Math.tan((vfov / 2) * D))
+  const tilt = radius - edgeAbove
+  const forward = unit(add(scale(toCentre, Math.cos(tilt)), scale(screenUp, Math.sin(tilt))))
+  return { eye, eyeAlt: dist - w.R, vfovDeg: vfov, ...orient(forward, screenUp) }
 }
 
 /**
  * The climb, s from 0 (yard) to 1 (orbit). Height grows exponentially, so
  * every bit of scroll multiplies it by the same factor: metres, then
  * kilometres, then hundreds of kilometres, the way a real launch feels.
- * On the way up the camera looks towards the station (`watch`), then turns
- * to look down on you both for the last stretch.
+ * Played backwards (s from 1 to 0) it's the dive from the opening shot.
  */
 export function liftCamera(w: World, ground: Cam, orbit: Cam, s: number, watch?: V3): Cam {
   if (s <= 0) return ground
@@ -286,13 +293,19 @@ export function liftCamera(w: World, ground: Cam, orbit: Cam, s: number, watch?:
     smoothstep(0, 1, s) ** 1.2,
   )
   const eye = add(w.centre, scale(fromCentre, w.R + alt))
-  // Look along the line from your yard to the station, a fixed direction, so
-  // the turn can't whip around when the camera climbs past the station's height.
-  const chase = watch
-    ? slerp(ground.forward, unit(sub(watch, ground.eye)), smoothstep(0, 0.5, s))
+  // Three directions, blended in turn: down at Earth (orbit), out at the
+  // horizon you're dropping towards (the middle of the trip, so Earth's edge
+  // flattens in front of you instead of the view swinging up into black sky),
+  // then up at your sky (the yard). `watch` bends the last leg towards the
+  // station along the fixed line from your yard, so the turn can't whip around.
+  const az = Math.atan2(ground.forward[0], ground.forward[1]) / D
+  const horizon = enu(az, -3)
+  const yard = watch
+    ? slerp(ground.forward, unit(sub(watch, ground.eye)), smoothstep(0, 0.3, s))
     : ground.forward
-  const forward = slerp(chase, orbit.forward, smoothstep(0.45, 1, s))
-  const upHint = slerp(ground.up, orbit.up, smoothstep(0.35, 1, s))
+  const low = slerp(yard, horizon, smoothstep(0.05, 0.4, s))
+  const forward = slerp(low, orbit.forward, smoothstep(0.4, 1, s))
+  const upHint = slerp(ground.up, orbit.up, smoothstep(0.4, 1, s))
   return {
     eye,
     eyeAlt: alt,

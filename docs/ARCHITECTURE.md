@@ -72,7 +72,7 @@ docs/            product, architecture, decisions, learn chapters, growth assets
 - **Initial route:** under **150 KB gzipped JS**, enforced by `scripts/check-bundle-size.mjs` in CI.
 - **Lighthouse mobile:** ≥90 in performance, accessibility, best practices and SEO, enforced by `lighthouserc.json` in CI.
 - **Lazy loads:** the city index, share-card renderer (canvas + QR + font subset), the Flight's WebGL film, and .ics generator.
-- **The Flight** (D-033): the film chunk has its own budget of **40 KB gzipped** (now 8.3 KB), also enforced by `check-bundle-size.mjs`. Its code loads when the browser is idle; the GPU context starts on the first touch, scroll or key, so Lighthouse (which never touches the page) measures the 2D first paint. It draws **on demand** (scroll, resize, new data), never in a loop, and not while offscreen. Device pixel ratio is capped at 1.5 on phones.
+- **The Flight** (D-033, D-034): the film chunk has its own budget of **40 KB gzipped** (now 11.4 KB), also enforced by `check-bundle-size.mjs`. It starts once the answer has painted (idle callback, ≤ 1.2 s). It draws on scroll, resize and new data, plus a 20-second intro and drift in the opening shot, and never while offscreen or hidden. Device pixel ratio is capped at 1.5 on phones. Its globe textures (2048×1024 ×2) are painted on the device from `earth-110m.json` and `lights.json` (31 KB gzipped). Software-rendered WebGL gets the 2D picture, which is also what headless Lighthouse measures.
 - **First paint:** the 3-second answer must render from cached elements and a cached place before any lazy chunk loads. Phase 3 pre-renders HTML for the default place so first paint already has an answer.
 
 ## Privacy architecture

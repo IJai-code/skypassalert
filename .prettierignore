@@ -8,3 +8,4 @@ public/data/earth-110m.json
 data/archive
 src/engine/time/eop-data.json
 public/data/elements.json
+public/data/lights.json

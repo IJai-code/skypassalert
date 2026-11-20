@@ -45,7 +45,7 @@ describe('the Flight stage', () => {
   it('is a tall section named by the answer, with a scrub rail', () => {
     stage()
     const section = screen.getByRole('region', { name: 'Tonight in Fremont' })
-    expect(section.style.height).toBe('320svh')
+    expect(section.style.height).toBe('380svh')
     const rail = screen.getByRole('slider', { name: /scrub through the pass/i })
     const seconds = Math.round((pass.end.unixMs - pass.start.unixMs) / 1000)
     expect(rail).toHaveAttribute('aria-valuemax', String(seconds))
@@ -65,7 +65,9 @@ describe('the Flight stage', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const { container } = stage()
     fireEvent.pointerDown(window)
-    await waitFor(() => expect(warn).toHaveBeenCalledWith(expect.stringMatching(/no WebGL2/)))
+    await waitFor(() =>
+      expect(warn).toHaveBeenCalledWith(expect.stringMatching(/no hardware WebGL2/)),
+    )
     await waitFor(() => expect(container.querySelector('.flight-film')).toBeNull())
     expect(container.querySelector('.flight-poster')).not.toBeNull()
     warn.mockRestore()

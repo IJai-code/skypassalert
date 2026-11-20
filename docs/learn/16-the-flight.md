@@ -27,16 +27,26 @@ These two routes to the same object must agree. The test checks they do, to with
 
 > **Predict:** why can't we just use the second route everywhere? (Hint: the track has samples every few seconds with the exact az/el the pass finder solved for; the orbit samples are every 30 s.)
 
+<a id="textures"></a>
+## 1½. Painting Earth from data
+The globe has no photos. Two textures are painted on the phone in a few milliseconds, each 2048 × 1024, longitude across and latitude down (equirectangular):
+- **Surface:** the sea as a deep-blue gradient; the land from Natural Earth's outlines, coloured by latitude (ice near the poles, forests, dry belts near 25°).
+- **Night:** red = city lights, one soft dot per city from GeoNames, brighter for bigger cities; green = 1 over the sea, so the shader knows where the Sun can glint off water.
+
+The shader turns each pixel's hit point into latitude and longitude (a 3×3 rotation from your frame back to Earth-fixed), reads both textures, and mixes them by how much sunlight falls there: lights only on the night side, glint only on the day side.
+
+> **Predict:** close to the ground the 2048-pixel texture has one texel per ~20 km, so a city becomes a big soft blob. Why does raising the light value to a power (`pow(r, 3.5)`) make the blobs look like points again? (Hint: a Gaussian to a power is a narrower Gaussian.)
+
 <a id="timeline"></a>
 ## 2. Scroll is the clock
-The top of Tonight is 3.2 screens tall, with a stage that sticks while you scroll through it. How far through you are is `p`, from 0 to 1:
+The top of Tonight is 3.8 screens tall, with a stage that sticks while you scroll through it. How far through you are is `p`, from 0 to 1:
 
 | p | Beat | What moves |
 |---|---|---|
-| 0–0.08 | Tonight | nothing: you read the answer |
-| 0.08–0.52 | The pass | the clock runs from start to end, **linearly** |
-| 0.52–0.84 | Lift-off | the camera climbs |
-| 0.84–1 | Settle | nothing: the page continues |
+| 0–0.12 | Orbit | the opening shot: you read the answer over Earth |
+| 0.12–0.40 | Dive | the camera drops from orbit into your yard |
+| 0.40–0.86 | The pass | the clock runs from start to end, **linearly** |
+| 0.86–1 | Settle | nothing: the page continues |
 
 Linear matters: a centimetre of scroll is always the same number of seconds, so the station's speed on the screen is its real speed on the sky.
 
@@ -46,13 +56,13 @@ The page scrolls the browser's normal way. The film *chases* the scroll: each fr
 ## 3. The camera
 **On the ground** the camera turns with the station, like your head would. Near the zenith the station's azimuth swings wildly while it barely moves on the sky, so the camera follows an *averaged* azimuth. Each moment is weighted by cos(elevation): high up, azimuth hardly counts.
 
-**The climb** is the fun part. Height grows **exponentially**:
+**The opening shot** sits two Earth radii from the centre, a little behind your town, looking towards the Sun, tilted so Earth's top edge lands 42% of the way down the screen. **The dive** is the same path as a climb, run backwards. Height changes **exponentially**:
 
 ```
 h = 1.7 m × (5,000 km / 1.7 m)^(s^0.55)
 ```
 
-Every bit of scroll multiplies the height by the same factor: metres, then kilometres, then hundreds of kilometres. It's the same reason zooming maps feel smooth. On the way up the camera looks along the fixed line from your yard to the station, then turns down to look at you both.
+Every bit of scroll multiplies the height by the same factor: thousands of kilometres, then hundreds, then metres. It's the same reason zooming maps feel smooth. The view turns in three legs: down at Earth, out at the horizon you're dropping towards (so Earth's edge flattens in front of you), then up into your sky.
 
 > **Predict:** we first aimed the climbing camera at the station *from the camera's current position*. A test caught a 5° jump in one step. At what height did it happen? (Answer in `camera.ts`: when the camera rose past the station's own height, ~420 km.)
 
@@ -77,7 +87,11 @@ Everything else is ordinary graphics:
 
 There's no depth buffer. Earth hides things analytically: the same ray test, cut off at the object's distance.
 
-**On demand.** Nothing animates by itself. The GPU draws a frame only when the scroll, the size or the data changes, which is why the film costs no battery while you read.
+**Bloom.** The frame is drawn into an offscreen, anti-aliased buffer. Its bright parts are copied at half size, blurred across and down (twice, wider the second time), and added back on top. That's why city lights, the Sun and the station glow the way they do in a camera.
+
+**On demand.** Apart from the opening shot's first 20 seconds (a short intro and a slow drift), the GPU draws a frame only when the scroll, the size or the data changes, so the film costs no battery while you read.
+
+> **A bug worth knowing:** our first animation loop asked for the next frame twice per frame, once in `draw()` and once in `tick()`. Two became four, then eight… and in a few seconds the page froze. Find the fix in `Flight.tsx` and explain why one frame at a time can never pile up.
 
 ## 5. Why you can see it
 From orbit, the picture shows what chapter 04 proved: after sunset you're on the night side, but 420 km up the station is still in sunlight. Watch the orbit line turn from amber to grey: that's the station entering Earth's shadow, and the moment it vanishes from your sky.

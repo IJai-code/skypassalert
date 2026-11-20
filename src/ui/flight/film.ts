@@ -1,8 +1,8 @@
-// The Flight's content, prepared once per pass (film) and per moment (frame):
-// which stars, where the station is, what the camera sees, which labels go
-// where. No WebGL and no DOM here, so all of it is testable in Node.
+// The Flight's content, prepared once per film and per moment (frame): which
+// stars, where the stations are, what the camera sees, which labels go where.
+// No WebGL and no DOM here, so all of it is testable in Node.
 // Learn: docs/learn/16-the-flight.md
-import type { ForecastPass } from '../../engine/index.ts'
+import type { ForecastPass, LiveOrbit } from '../../engine/index.ts'
 import { PLANET_NAMES } from '../../copy/en.ts'
 import type { Place } from '../../engine/place.ts'
 import { skyScene } from '../../engine/sky/scene.ts'
@@ -16,17 +16,17 @@ import {
   groundView,
   liftCamera,
   lookAt,
-  orbitCamera,
+  openingCamera,
+  passRig,
   projectDir,
   projectPoint,
-  passRig,
   type Cam,
   type GroundRig,
   type LookPoint,
   type Screen,
 } from './camera.ts'
 import { at as atP, duskTimeline, passTimeline, type At, type Timeline } from './timeline.ts'
-import { clamp01, dot, scale, smoothstep, sub, unit, add, type V3 } from './vec.ts'
+import { add, clamp01, dot, scale, smoothstep, sub, unit, type V3 } from './vec.ts'
 import {
   groundPoint,
   hitEarth,
@@ -42,6 +42,8 @@ const SIDEREAL_DAY_MS = 86_164_090.5
 
 export type Highlight = { dir: V3; refMs: number; label: string }
 
+type Ribbons = { data: Float32Array; count: number; starts: number[] }
+
 export type Film = {
   world: World
   tl: Timeline
@@ -49,21 +51,24 @@ export type Film = {
   /** The pass, on a pass night. */
   pass: ForecastPass | null
   rig: GroundRig | null
-  /** Which way you face at the start (the pass's opening, or the thing to see). */
+  /** Which way you face in the yard (the pass's opening, or the thing to see). */
   faceAz: number
   /** How high the thing to see is, on nights without a pass. */
   faceEl?: number | undefined
+  /** Where the Sun is (azimuth) at the opening moment: the opening shot looks that way. */
+  sunAz: number
   /** Stars, Moon and planets are computed for this moment and turned from there. */
   refMs: number
   stars: { data: Float32Array; count: number } // [dx, dy, dz, mag, r, g, b] per star
   moon: { dir: V3; illumination: number }
   planets: Array<{ id: string; dir: V3; magnitude: number }>
   highlight: Highlight | null
+  /** The visible part of the pass, as a ribbon. */
   trail: { data: Float32Array; count: number } | null
-  orbitLine: { data: Float32Array; count: number } | null
-  orbitCam: Cam | null
-  /** Where the station is when the pass ends (the camera watches it on the climb). */
-  stationEnd: V3 | null
+  /** Orbits seen from space: the pass's 20 minutes, or each station's live orbit. */
+  orbits: Ribbons
+  /** Stations drawn live (pass-free nights): where each one is, by time. */
+  live: LiveOrbit[]
   /** Unit vector of the sky's turning axis (towards the celestial pole). */
   pole: V3
 }
@@ -77,6 +82,7 @@ export type FilmInput =
       toMs: number
       faceAz: number
       highlight: Highlight | null
+      live: readonly LiveOrbit[]
       catalog: StarCatalog | null
     }
 
@@ -91,17 +97,12 @@ export function makeFilm(input: FilmInput): Film {
       : duskTimeline(input.fromMs, input.toMs)
   const refMs = pass ? pass.peak.unixMs : (tl.clock0 + tl.clock1) / 2
   const scene = skyScene(place, refMs, catalog)
-
-  const stars = starBuffer(catalog, scene.stars.az, scene.stars.el)
   const rig = pass ? passRig(pass) : null
-  const faceAz = rig ? rig.az0 : input.kind === 'dusk' ? input.faceAz : 0
+  const live = input.kind === 'dusk' ? [...input.live] : []
 
-  let orbitCam: Cam | null = null
-  let stationEnd: V3 | null = null
-  if (pass) {
-    stationEnd = stationFromOrbit(world, sampleAt(pass.station.samples, pass.end.unixMs))
-    orbitCam = orbitCamera(world, stationEnd, faceAz)
-  }
+  const orbitPaths = pass
+    ? [pass.station.samples]
+    : live.map((l) => l.samples.filter((_, i) => i % 2 === 0))
 
   return {
     world,
@@ -109,13 +110,17 @@ export function makeFilm(input: FilmInput): Film {
     place,
     pass,
     rig,
-    faceAz,
+    faceAz: rig ? rig.az0 : input.kind === 'dusk' ? input.faceAz : 0,
     faceEl:
       input.kind === 'dusk' && input.highlight
-        ? (Math.asin(Math.max(-1, Math.min(1, input.highlight.dir[2]))) * 180) / Math.PI
+        ? Math.asin(Math.max(-1, Math.min(1, input.highlight.dir[2]))) / D
         : undefined,
     refMs,
-    stars,
+    sunAz: (() => {
+      const d = sunDirection(world, subsolarPoint(tl.clock0))
+      return (Math.atan2(d[0], d[1]) / D + 360) % 360
+    })(),
+    stars: starBuffer(catalog, scene.stars.az, scene.stars.el),
     moon: {
       dir: enu(scene.moon.azDeg, scene.moon.elDeg),
       illumination: scene.moon.illumination,
@@ -127,9 +132,17 @@ export function makeFilm(input: FilmInput): Film {
     })),
     highlight: input.kind === 'dusk' ? input.highlight : null,
     trail: pass ? trailBuffer(pass) : null,
-    orbitLine: pass ? orbitBuffer(world, pass) : null,
-    orbitCam,
-    stationEnd,
+    orbits: ribbons(
+      orbitPaths.map((samples) =>
+        samples.map((s) => ({
+          p: stationFromOrbit(world, s),
+          t: 0,
+          // Bright in sunlight, a faint thread through Earth's shadow.
+          b: s.sunlit >= 0.5 ? 0.95 : 0.16,
+        })),
+      ),
+    ),
+    live,
     pole: [0, Math.cos(place.latDeg * D), Math.sin(place.latDeg * D)],
   }
 }
@@ -143,7 +156,7 @@ function starBuffer(catalog: StarCatalog | null, az: Float32Array, el: Float32Ar
   if (!catalog) return { data: new Float32Array(0), count: 0 }
   const keep: number[] = []
   catalog.stars.forEach((s, i) => {
-    if (s[2] < 5.8) keep.push(i)
+    if (s[2] < 6.2) keep.push(i)
   })
   const data = new Float32Array(keep.length * 7)
   keep.forEach((i, k) => {
@@ -175,18 +188,36 @@ export function stationAlongTrack(track: readonly LookPoint[], t: number): V3 {
 
 const brightnessOf = (magnitude: number) => Math.max(0.35, Math.min(1, (5 - magnitude) / 4))
 
+type RibbonPoint = { p: V3; t: number; b: number }
+
 /**
- * The pass as a ribbon: each point twice (left and right edge), with its
- * neighbour so the shader can find the direction of travel. Three points per
- * prediction sample, so the curve stays smooth up close.
+ * Paths as ribbons: each point twice (left and right edge), with its
+ * neighbour so the shader can find the direction of travel.
  * Layout per vertex: [x, y, z, ox, oy, oz, side, seconds, brightness].
  */
+function ribbons(paths: RibbonPoint[][]): Ribbons {
+  const total = paths.reduce((n, p) => n + p.length * 2, 0)
+  const data = new Float32Array(total * 9)
+  const starts: number[] = []
+  let v = 0
+  for (const pts of paths) {
+    starts.push(v)
+    pts.forEach((q, i) => {
+      // Keep the heading at the end by extending the last step.
+      const other = i < pts.length - 1 ? pts[i + 1]!.p : add(q.p, sub(q.p, pts[i - 1]!.p))
+      for (const side of [-1, 1]) data.set([...q.p, ...other, side, q.t, q.b], v++ * 9)
+    })
+  }
+  return { data, count: v, starts }
+}
+
+/** The visible pass, three points per prediction sample so it stays smooth up close. */
 function trailBuffer(pass: ForecastPass) {
   const track = pass.track
   const t0 = track[0]!.unixMs
   const t1 = track[track.length - 1]!.unixMs
   const steps = Math.max(2, (track.length - 1) * 3)
-  const pts: Array<{ p: V3; t: number; b: number }> = []
+  const pts: RibbonPoint[] = []
   for (let i = 0; i <= steps; i++) {
     const t = t0 + ((t1 - t0) * i) / steps
     let mag = track[track.length - 1]!.magnitude
@@ -197,35 +228,8 @@ function trailBuffer(pass: ForecastPass) {
       }
     pts.push({ p: stationAlongTrack(track, t), t: (t - t0) / 1000, b: brightnessOf(mag) })
   }
-  const data = new Float32Array(pts.length * 2 * 9)
-  pts.forEach((q, i) => {
-    const other = i < pts.length - 1 ? pts[i + 1]!.p : add(q.p, sub(q.p, pts[i - 1]!.p)) // keep heading at the end
-    for (const [k, side] of [-1, 1].entries())
-      data.set([...q.p, ...other, side, q.t, q.b], (i * 2 + k) * 9)
-  })
-  return { data, count: pts.length * 2 }
-}
-
-const AMBER: [number, number, number] = [1, 0.776, 0.361]
-const INK_3: [number, number, number] = [0.565, 0.545, 0.49]
-
-/**
- * Twenty minutes of orbit around the pass, as a line: amber while the
- * station is in sunlight, grey once it's in Earth's shadow.
- * Layout per vertex: [x, y, z, r, g, b, a].
- */
-function orbitBuffer(world: World, pass: ForecastPass) {
-  const s = pass.station.samples
-  const from = s[0]!.unixMs
-  const to = s[s.length - 1]!.unixMs
-  const n = (s.length - 1) * 4
-  const data = new Float32Array((n + 1) * 7)
-  for (let i = 0; i <= n; i++) {
-    const smp = sampleAt(s, from + ((to - from) * i) / n)
-    const lit = smp.sunlit >= 0.5
-    data.set([...stationFromOrbit(world, smp), ...(lit ? AMBER : INK_3), lit ? 0.75 : 0.5], i * 7)
-  }
-  return { data, count: n + 1 }
+  const r = ribbons([pts])
+  return { data: r.data, count: r.count }
 }
 
 /** Coastlines as line segments on the sphere: [x, y, z] per vertex, two per segment. */
@@ -255,16 +259,11 @@ export function skySpin(film: Film, fromMs: number, toMs: number): Float32Array 
   const s = Math.sin(a)
   const t = 1 - c
   // Rodrigues' rotation formula; GL wants columns.
+  // prettier-ignore
   return new Float32Array([
-    t * x * x + c,
-    t * x * y + s * z,
-    t * x * z - s * y,
-    t * x * y - s * z,
-    t * y * y + c,
-    t * y * z + s * x,
-    t * x * z + s * y,
-    t * y * z - s * x,
-    t * z * z + c,
+    t * x * x + c, t * x * y + s * z, t * x * z - s * y,
+    t * x * y - s * z, t * y * y + c, t * y * z + s * x,
+    t * x * z + s * y, t * y * z - s * x, t * z * z + c,
   ])
 }
 
@@ -275,6 +274,18 @@ export const spinDir = (m: Float32Array, d: V3): V3 => [
 ]
 
 // ---------------------------------------------------------------- frames
+
+/** Things that move with the wall clock, not the scroll: the intro and the slow drift. */
+export type Ambient = {
+  /** 0 → 1 over the first second the film is on screen. */
+  intro: number
+  /** Degrees the opening camera has swung around your town. */
+  driftDeg: number
+  /** Now, for stations drawn live. */
+  nowMs: number
+}
+
+export const STILL: Ambient = { intro: 1, driftDeg: 0, nowMs: 0 }
 
 export type Frame = {
   at: At
@@ -290,18 +301,32 @@ export type Frame = {
   limit: number
   /** Seconds since the pass began, for the ribbon. */
   trailClock: number
+  /** The station whose pass this is (null on pass-free nights). */
   station: { pos: V3; sunlit: number; magnitude: number } | null
+  /** Live stations (pass-free nights): where each is now. */
+  liveNow: Array<{ noradId: number; pos: V3; sunlit: number }>
   sprites: Float32Array // [x, y, z, w, r, g, b, a, size, ring] per sprite
   spriteCount: number
   lineOfSight: Float32Array | null
+  toEcef: Float32Array
+  /** 0 → 1 as the film first appears. */
+  fade: number
 }
 
+const AMBER: [number, number, number] = [1, 0.776, 0.361]
 const CREAM: [number, number, number] = [0.914, 0.894, 0.839]
+const easeOut = (x: number) => 1 - (1 - clamp01(x)) ** 3
 
-export function frameAt(film: Film, p: number, s: Screen, reducedMotion: boolean): Frame {
+export function frameAt(
+  film: Film,
+  p: number,
+  s: Screen,
+  reducedMotion: boolean,
+  amb: Ambient = STILL,
+): Frame {
   const at = atP(film.tl, p, reducedMotion)
   const t = at.clockMs
-  const cam = cameraAt(film, at, s)
+  const cam = cameraAt(film, at, s, amb)
   const sun = sunDirection(film.world, subsolarPoint(t))
   const upEye = unit(sub(cam.eye, film.world.centre))
   const sunAltDeg = Math.asin(Math.max(-1, Math.min(1, dot(sun, upEye)))) / D
@@ -309,7 +334,8 @@ export function frameAt(film: Film, p: number, s: Screen, reducedMotion: boolean
   // The air thins out between about 20 and 400 km up.
   const space = smoothstep(1.3, 2.6, Math.log10(Math.max(cam.eyeAlt, 1e-4)))
   const spin = skySpin(film, film.refMs, t)
-  const limit = limitingMagnitude(sunAltDeg) + (5.8 - limitingMagnitude(sunAltDeg)) * space
+  const groundLimit = limitingMagnitude(sunAltDeg)
+  const limit = groundLimit + (6.2 - groundLimit) * space
 
   const sprites: number[] = []
   const sprite = (
@@ -339,13 +365,17 @@ export function frameAt(film: Film, p: number, s: Screen, reducedMotion: boolean
     sprite(spinDir(skySpin(film, h.refMs, t), h.dir), 0, CREAM, 0.85 * (1 - space), 30, 1)
   }
 
+  // You, from above: a dot and a ring.
+  sprite([0, 0, 0], 1, CREAM, space, 7)
+  sprite([0, 0, 0], 1, CREAM, space * 0.7, 20, 1)
+
   let station: Frame['station'] = null
   let lineOfSight: Float32Array | null = null
   if (film.pass && film.rig) {
     const smp = sampleAt(film.pass.station.samples, t)
     const fromLook = stationAlongTrack(film.rig.track, t)
     const fromOrbit = stationFromOrbit(film.world, smp)
-    // The two agree to a few km; hand over from one to the other on the climb.
+    // The two agree to a few km; hand over from one to the other on the way down.
     const pos = add(scale(fromLook, 1 - space), scale(fromOrbit, space))
     const look = lookAt(film.rig.track, t)
     let magnitude = film.rig.track[film.rig.track.length - 1]!.magnitude
@@ -353,28 +383,31 @@ export function frameAt(film: Film, p: number, s: Screen, reducedMotion: boolean
     station = { pos, sunlit: smp.sunlit, magnitude }
     const lit = clamp01(smp.sunlit)
     const above = look.elDeg > -1 || space > 0.5
-    sprite(
-      pos,
-      1,
-      AMBER,
-      above ? lit * brightnessOf(magnitude) : 0,
-      Math.max(6, Math.min(13, 9.5 - 1.4 * magnitude)),
-    )
+    const size = Math.max(6, Math.min(13, 9.5 - 1.4 * magnitude)) + space * 4
+    sprite(pos, 1, AMBER, above ? lit * brightnessOf(magnitude) : 0, size)
     // From orbit, a station in Earth's shadow is still there: draw it hollow.
-    sprite(pos, 1, AMBER, space * (1 - lit) * 0.9, 15, 1)
-    sprite([0, 0, 0], 1, CREAM, space, 6)
-    sprite([0, 0, 0], 1, CREAM, space * 0.7, 18, 1)
+    sprite(pos, 1, AMBER, space * (1 - lit) * 0.9, 16, 1)
     if (space > 0.01)
       lineOfSight = new Float32Array([
         0,
         0,
         0,
         ...CREAM,
-        0.45 * space,
+        0.5 * space,
         ...pos,
         ...CREAM,
-        0.45 * space,
+        0.5 * space,
       ])
+  }
+
+  // Pass-free nights: both stations where they really are right now.
+  const liveNow = film.live.map((l) => {
+    const smp = sampleAt(l.samples, amb.nowMs || t)
+    return { noradId: l.noradId, pos: stationFromOrbit(film.world, smp), sunlit: smp.sunlit }
+  })
+  for (const l of liveNow) {
+    sprite(l.pos, 1, AMBER, space * (l.sunlit >= 0.5 ? 1 : 0), 11)
+    sprite(l.pos, 1, AMBER, space * (l.sunlit < 0.5 ? 0.9 : 0), 16, 1)
   }
 
   return {
@@ -390,13 +423,16 @@ export function frameAt(film: Film, p: number, s: Screen, reducedMotion: boolean
     limit,
     trailClock: film.pass ? (t - film.pass.track[0]!.unixMs) / 1000 : 0,
     station,
+    liveNow,
     sprites: new Float32Array(sprites),
     spriteCount: sprites.length / 10,
     lineOfSight,
+    toEcef: film.world.toEcef,
+    fade: reducedMotion ? 1 : easeOut(amb.intro * 1.4),
   }
 }
 
-export function cameraAt(film: Film, at: At, s: Screen): Cam {
+export function cameraAt(film: Film, at: At, s: Screen, amb: Ambient = STILL): Cam {
   // On a pass-free night, keep facing the thing to see as the sky turns.
   let face: { azDeg: number; elDeg?: number | undefined } = {
     azDeg: film.faceAz,
@@ -410,9 +446,13 @@ export function cameraAt(film: Film, at: At, s: Screen): Cam {
     }
   }
   const ground = groundView(film.rig, face, at, s)
-  return film.orbitCam && at.lift > 0
-    ? liftCamera(film.world, ground, film.orbitCam, at.lift, film.stationEnd ?? undefined)
-    : ground
+  if (at.lift <= 0) return ground
+  // The intro starts a third farther out and settles in. The opening shot
+  // looks towards the Sun, so the sunlit edge of the air glows across the top.
+  const zoom = 1 + 0.35 * (1 - easeOut(amb.intro))
+  const opening = openingCamera(film.world, film.sunAz, s, amb.driftDeg, zoom)
+  const watch = film.pass && film.rig ? stationAlongTrack(film.rig.track, at.clockMs) : undefined
+  return liftCamera(film.world, ground, opening, at.lift, watch)
 }
 
 // ---------------------------------------------------------------- labels
@@ -433,7 +473,12 @@ export function labelsAt(
   film: Film,
   f: Frame,
   s: Screen,
-  o: { formatMinute: (ms: number) => string; stationShort: string },
+  o: {
+    formatMinute: (ms: number) => string
+    stationShort: string
+    placeShort?: string
+    stationName?: (noradId: number) => string
+  },
 ): Label[] {
   const out: Label[] = []
   const onScreen = (x: number, y: number) =>
@@ -482,24 +527,32 @@ export function labelsAt(
     if (p && onScreen(p.x, p.y))
       out.push({ key: 'thing', text: h.label, x: p.x, y: p.y, alpha: ground, kind: 'thing' })
   }
-  if (f.space > 0.02 && f.station) {
+  if (f.space > 0.02) {
+    const visible = (pos: V3) => {
+      const rel = sub(pos, f.cam.eye)
+      const d = Math.hypot(...rel)
+      const blocked = hitEarth(film.world, f.cam.eye, f.cam.eyeAlt, scale(rel, 1 / d))
+      return !(blocked !== null && blocked < d * 0.999)
+    }
     const you = projectPoint(f.cam, s, [0, 0, 0])
     if (you && onScreen(you.x, you.y))
-      out.push({ key: 'you', text: 'You', x: you.x, y: you.y, alpha: f.space, kind: 'you' })
-    const st = f.station.pos
-    const rel = sub(st, f.cam.eye)
-    const d = Math.hypot(...rel)
-    const blocked = hitEarth(film.world, f.cam.eye, f.cam.eyeAlt, scale(rel, 1 / d))
-    const p = projectPoint(f.cam, s, st)
-    if (p && onScreen(p.x, p.y) && !(blocked !== null && blocked < d * 0.999))
       out.push({
-        key: 'station',
-        text: o.stationShort,
-        x: p.x,
-        y: p.y,
+        key: 'you',
+        text: o.placeShort ? `You · ${o.placeShort}` : 'You',
+        x: you.x,
+        y: you.y,
         alpha: f.space,
-        kind: 'station',
+        kind: 'you',
       })
+    const named: Array<{ key: string; text: string; pos: V3 }> = []
+    if (f.station) named.push({ key: 'station', text: o.stationShort, pos: f.station.pos })
+    for (const l of f.liveNow)
+      named.push({ key: `live-${l.noradId}`, text: o.stationName?.(l.noradId) ?? '', pos: l.pos })
+    for (const n of named) {
+      const p = projectPoint(f.cam, s, n.pos)
+      if (n.text && p && onScreen(p.x, p.y) && visible(n.pos))
+        out.push({ key: n.key, text: n.text, x: p.x, y: p.y, alpha: f.space, kind: 'station' })
+    }
   }
   return out
 }

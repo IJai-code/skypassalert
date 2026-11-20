@@ -255,6 +255,9 @@
   .flight-label-thing {
     margin: -6px 0 0 20px;
   }
+  .flight-label-flip {
+    translate: calc(-100% - 28px) 0;
+  }
 
   .flight-head {
     position: absolute;
@@ -286,6 +289,35 @@
   @media (max-aspect-ratio: 1/2) {
     .flight-ground {
       top: 56%;
+    }
+  }
+
+  /* Flying: the film opens in orbit, so the answer stands in space at the top
+     of the screen, above Earth's glowing edge (42% down), in bigger type. */
+  .flight-stage[data-fly='1'] {
+    background: radial-gradient(120% 70% at 50% 100%, #0b1530 0%, #03050b 55%, #000 100%);
+  }
+  .flight-stage[data-fly='1'] .flight-ground {
+    inset: calc(max(env(safe-area-inset-top), 14px) + 64px) 0 auto 0;
+    padding-bottom: 0;
+    transform: translateY(calc(var(--dock) * -28px));
+  }
+  .flight-stage[data-fly='1'] .flight-ground > div > div {
+    padding-top: 0;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    /* The answer rises in once, line by line, as the Earth fades up behind it. */
+    .flight-stage[data-fly='1'] .flight-ground > div > div > * {
+      animation: flight-rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    }
+    .flight-stage[data-fly='1'] .flight-ground > div > div > :nth-child(2) {
+      animation-delay: 0.08s;
+    }
+    .flight-stage[data-fly='1'] .flight-ground > div > div > :nth-child(3) {
+      animation-delay: 0.16s;
+    }
+    .flight-stage[data-fly='1'] .flight-ground > div > div > :nth-child(n + 4) {
+      animation-delay: 0.24s;
     }
   }
 
@@ -380,6 +412,17 @@
   }
 }
 
+@keyframes flight-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @keyframes rule-in {
   from {
     transform: scaleX(0);
@@ -393,4 +436,9 @@
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 0.18s;
+}
+
+/* Unlayered so it beats the size utility on the time: bigger when flying. */
+.flight-stage[data-fly='1'] .flight-time {
+  font-size: clamp(5rem, 27vw, 10rem);
 }

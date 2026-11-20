@@ -35,6 +35,12 @@ export type NightSky = {
 export type ForecastPass = VisiblePass & { moonAtPeak: MoonInfo; station: StationView }
 
 const STATION_MARGIN_MS = 10 * 60_000
+/** Live orbits: from 10 minutes ago to 100 minutes ahead, a little over one orbit. */
+const LIVE_FROM_MS = -10 * 60_000
+const LIVE_TO_MS = 100 * 60_000
+
+/** Where each station is right now and for the next orbit (the Flight's opening shot). */
+export type LiveOrbit = { noradId: number } & StationView
 
 export type Forecast = {
   place: Place
@@ -44,6 +50,7 @@ export type Forecast = {
   elements: ElementsInfo[]
   passes: ForecastPass[]
   nights: NightSky[]
+  live: LiveOrbit[]
 }
 
 export type ForecastRequest = {
@@ -64,6 +71,7 @@ export function forecast(req: ForecastRequest): Forecast {
 
   const passes: Array<VisiblePass & { station: StationView }> = []
   const elements: ElementsInfo[] = []
+  const live: LiveOrbit[] = []
   for (const el of req.elements) {
     elements.push({
       noradId: el.NORAD_CAT_ID,
@@ -71,6 +79,17 @@ export function forecast(req: ForecastRequest): Forecast {
       epochMs: epochToUnixMs(el.EPOCH),
     })
     const sat = propagator.init(el)
+    live.push({
+      noradId: el.NORAD_CAT_ID,
+      ...stationView(
+        sat,
+        req.fromMs + LIVE_FROM_MS,
+        req.fromMs + LIVE_TO_MS,
+        req.fromMs,
+        30_000,
+        eop,
+      ),
+    })
     for (const p of findPasses(sat, req.place, req.fromMs, toMs, { ...req.passOptions, eop })) {
       // Ten minutes either side: enough ground track to cross the globe view.
       const from = p.start.unixMs - STATION_MARGIN_MS
@@ -108,5 +127,6 @@ export function forecast(req: ForecastRequest): Forecast {
     elements,
     passes: withMoon,
     nights,
+    live,
   }
 }

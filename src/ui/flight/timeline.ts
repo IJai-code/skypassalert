@@ -4,7 +4,7 @@
 // Learn: docs/learn/16-the-flight.md#timeline
 import { clamp01, smooth, smoothstep } from './vec.ts'
 
-export type Beat = 'tonight' | 'pass' | 'lift' | 'settle' | 'dusk'
+export type Beat = 'orbit' | 'dive' | 'tonight' | 'pass' | 'settle' | 'dusk'
 
 type Span = { beat: Beat; from: number; to: number }
 
@@ -19,37 +19,38 @@ export type Timeline = {
 }
 
 /**
- * A pass night: stand in your yard (tonight), scrub the pass (pass), rise to
- * orbit (lift), then hand back to the page (settle).
- * The film opens at the pass's start, or at "now" if it's already up.
+ * A pass night: open in orbit with the answer (orbit), dive down through the
+ * air into your yard (dive), scrub the pass (pass), then hand back to the
+ * page (settle). The film's moment is the pass's start, or "now" if it's up.
  */
 export function passTimeline(startMs: number, endMs: number, nowMs: number): Timeline {
   return {
     kind: 'pass',
     spans: [
-      { beat: 'tonight', from: 0, to: 0.08 },
-      { beat: 'pass', from: 0.08, to: 0.52 },
-      { beat: 'lift', from: 0.52, to: 0.84 },
-      { beat: 'settle', from: 0.84, to: 1 },
+      { beat: 'orbit', from: 0, to: 0.12 },
+      { beat: 'dive', from: 0.12, to: 0.4 },
+      { beat: 'pass', from: 0.4, to: 0.86 },
+      { beat: 'settle', from: 0.86, to: 1 },
     ],
     clock0: Math.max(startMs, Math.min(nowMs, endMs)),
     clock1: endMs,
-    screens: 3.2,
+    screens: 3.8,
   }
 }
 
-/** A night with no pass: scrub dusk into dark and watch the stars come out. */
+/** A night with no pass: orbit, dive, then scrub dusk into dark. */
 export function duskTimeline(fromMs: number, toMs: number): Timeline {
   return {
     kind: 'dusk',
     spans: [
-      { beat: 'tonight', from: 0, to: 0.12 },
-      { beat: 'dusk', from: 0.12, to: 0.88 },
-      { beat: 'settle', from: 0.88, to: 1 },
+      { beat: 'orbit', from: 0, to: 0.12 },
+      { beat: 'dive', from: 0.12, to: 0.36 },
+      { beat: 'dusk', from: 0.36, to: 0.9 },
+      { beat: 'settle', from: 0.9, to: 1 },
     ],
     clock0: fromMs,
     clock1: Math.max(fromMs, toMs),
-    screens: 2.2,
+    screens: 3.2,
   }
 }
 
@@ -59,7 +60,7 @@ export type At = {
   u: number
   /** Time shown in the film. */
   clockMs: number
-  /** 0 = standing on the ground, 1 = in orbit. */
+  /** 1 = in orbit (the opening shot), falling to 0 as you dive into your yard. */
   lift: number
   /** 0 = the answer sits on the ground in big type, 1 = docked as a mono line up top. */
   dock: number
@@ -80,20 +81,18 @@ export function at(tl: Timeline, pRaw: number, reducedMotion = false): At {
   // the way through, so the station's speed on screen is its real speed.
   const clockMs = tl.clock0 + (tl.clock1 - tl.clock0) * mu
 
-  let lift = 0
-  if (tl.kind === 'pass') {
-    const ls = tl.spans.find((s) => s.beat === 'lift')!
-    const lu = clamp01((p - ls.from) / (ls.to - ls.from))
-    // Reduced motion: no flight, just a cut to orbit halfway through the beat.
-    lift = reducedMotion ? (lu >= 0.5 ? 1 : 0) : smooth(lu)
-  }
+  const ds = tl.spans.find((s) => s.beat === 'dive')!
+  const du = clamp01((p - ds.from) / (ds.to - ds.from))
+  // Reduced motion: no flight, a cut from orbit to the yard halfway down.
+  const lift = reducedMotion ? (du < 0.5 ? 1 : 0) : 1 - smooth(du)
+  const dockAt = ds.from
 
   return {
     beat: span.beat,
     u,
     clockMs,
     lift,
-    dock: reducedMotion ? (p > 0.05 ? 1 : 0) : smoothstep(0.015, 0.075, p),
+    dock: reducedMotion ? (p > dockAt ? 1 : 0) : smoothstep(dockAt - 0.03, dockAt + 0.04, p),
     follow: !reducedMotion,
   }
 }

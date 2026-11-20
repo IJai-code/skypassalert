@@ -252,6 +252,7 @@ export const FLIGHT_COPY = {
   rail: 'Scrub through the pass',
   railDusk: 'Scrub through the evening',
   you: 'You',
+  liveNow: 'Your evening, seen from orbit. Scroll to dive down into your sky.',
 }
 
 const km = (n: number) => `${(Math.round(n / 10) * 10).toLocaleString('en-US')} km`
