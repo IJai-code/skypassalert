@@ -391,7 +391,9 @@ export function FlightStage(props: Props) {
         ref={stageRef}
         className="flight-stage"
         data-film={ready && !failed ? '1' : '0'}
-        data-fly={capable && !failed ? '1' : '0'}
+        // Decided once, before the first paint: if the GPU later fails, the 2D
+        // picture takes over behind the same layout, so nothing jumps.
+        data-fly={capable ? '1' : '0'}
       >
         <canvas ref={posterRef} className="flight-poster" aria-hidden="true" />
         {filmOn && (

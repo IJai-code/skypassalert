@@ -306,7 +306,7 @@
     padding-top: 0;
   }
   @media (prefers-reduced-motion: no-preference) {
-    /* The answer rises in once, line by line, as the Earth fades up behind it. */
+    /* The answer settles in once, line by line, as the Earth fades up behind it. */
     .flight-stage[data-fly='1'] .flight-ground > div > div > * {
       animation: flight-rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
     }
@@ -412,13 +412,13 @@
   }
 }
 
+/* Movement only, never a fade from invisible: the answer is the page's
+   largest paint, and it must count as shown from the very first frame. */
 @keyframes flight-rise {
   from {
-    opacity: 0;
     transform: translateY(18px);
   }
   to {
-    opacity: 1;
     transform: none;
   }
 }
