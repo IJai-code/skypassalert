@@ -42,14 +42,16 @@ Original Phase 2 criteria:
 - [x] Learn chapters 01–07 (+ 09, 10) plus four `npm run lab:<name>` labs. GLOSSARY and DECISIONS updated.
 
 ## 3. MVP v0.1 LIVE
+Split into 3a (family night, done 2026-11-06) and 3b (zh-Hans, pre-render, device test, soft launch). See D-032.
+
 - **3-second rule:** best pass rendered with zero taps from the cached place.
 - **Places:** Fremont and Bay Area presets, geolocation (stays on device), in-browser GeoNames city search (lazy). Place picker in the header.
-- **Tonight's sky:** Moon and planets already shown; add meteor showers and a "nothing tonight? here's what is" state.
-- **Family mode:** bedtime filter (default 9:30 PM) and kid wording.
-- **Sharing and calendar:** share card PNG (EN/zh, sky arc, QR code); one-off 14-day `.ics` with alarms.
+- [x] **Tonight's sky (3a):** Moon and planets already shown; add meteor showers and a "nothing tonight? here's what is" state.
+- [x] **Family mode (3a):** bedtime filter (default 9:30 PM) and kid wording.
+- [x] **Sharing and calendar (3a; zh card in 3b):** share card PNG (EN/zh, sky arc, QR code); one-off 14-day `.ics` with alarms.
 - **Languages:** en and zh-Hans, marked "needs native-speaker review".
-- **Trust:** data age and an uncertainty note on every prediction; /privacy, /about, disclaimer, GeoNames attribution.
-- **SEO and budgets:** SEO basics; JS budget and Lighthouse budget met.
+- [x] **Trust (3a):** data age and an uncertainty note on every prediction; /privacy, /about, disclaimer, GeoNames attribution.
+- [x] **SEO and budgets (3a):** SEO basics; JS budget and Lighthouse budget met.
 - **Real-device smoke test:** iPhone Safari, Android Chrome, WeChat in-app browser.
 - **Soft launch** to about 10 trusted families, with a feedback form (docs/growth/LAUNCH.md soft-launch section).
 

@@ -1,6 +1,6 @@
 // A one-pass calendar event (.ics, RFC 5545) with a 10-minute reminder,
-// built on the device: no account, no server. Phase 3 adds 14-day files and
-// Phase 5 subscribable feeds.
+// built on the device: no account, no server. `buildIcsCalendar` puts two
+// weeks of passes in one file (D-032); Phase 5 adds subscribable feeds.
 
 export type IcsEvent = {
   uid: string
@@ -42,13 +42,8 @@ export function foldLine(line: string): string {
   return out.join('\r\n ')
 }
 
-export function buildIcs(e: IcsEvent, nowMs: number = Date.now()): string {
-  const lines = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//SkyPassAlert//Pass reminder//EN',
-    'CALSCALE:GREGORIAN',
-    'METHOD:PUBLISH',
+function vevent(e: IcsEvent, nowMs: number): string[] {
+  return [
     'BEGIN:VEVENT',
     `UID:${e.uid}`,
     `DTSTAMP:${stamp(nowMs)}`,
@@ -65,7 +60,22 @@ export function buildIcs(e: IcsEvent, nowMs: number = Date.now()): string {
     `TRIGGER:-PT${e.alarmMinutesBefore}M`,
     'END:VALARM',
     'END:VEVENT',
+  ]
+}
+
+/** One calendar file holding any number of passes, each with its own alarm. */
+export function buildIcsCalendar(events: readonly IcsEvent[], nowMs: number = Date.now()): string {
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//SkyPassAlert//Pass reminder//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    ...events.flatMap((e) => vevent(e, nowMs)),
     'END:VCALENDAR',
   ]
   return lines.map(foldLine).join('\r\n') + '\r\n'
 }
+
+export const buildIcs = (e: IcsEvent, nowMs: number = Date.now()): string =>
+  buildIcsCalendar([e], nowMs)

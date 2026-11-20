@@ -231,3 +231,29 @@ Node 22.18+ strips TypeScript types natively. Labs (`scripts/labs/*.ts`) import 
 - **Why the scrolling sky went:** it was the most "app-like" part, it put text over drawings, and the full-screen sky already lives in the Sky tab. A small exact chart answers "where do I look" faster.
 - **Cost:** 51 KB of fonts (one 15 KB face preloaded), no extra JS.
 
+
+## D-032 Phase 3 split; family night (bedtime, simple words, meteors, two-week calendar, trust pages) (2026-11-06)
+- **Context:** Phase 3 (MVP v0.1) is too big for one reviewable PR. The open items: meteor showers and a "nothing tonight" state, family mode, a 14-day `.ics`, zh-Hans, /privacy and /about, SEO basics, then the human items (real-device test, soft launch).
+- **Split:**
+  - **3a (this PR):** everything a family sees and uses.
+  - **3b (next):** move all copy into a catalog, add zh-Hans (marked needs-native-review), and pre-render the first paint for the default place.
+- **Bedtime:**
+  - Default 9:30 pm, stored on the device (`spa:family`).
+  - A pass that starts after bedtime is listed and marked "after bedtime", but never takes the headline. If it scores ≥ 1.25× the best pass before bedtime, the answer adds a footnote ("After bedtime · 10:12 pm · ISS").
+  - "Look now" and "get ready" ignore bedtime: if it's overhead, say so.
+  - Clocks compare on a noon-to-noon dial, so a 00:30 bedtime works. Before-dawn passes are for early risers and are never "after bedtime".
+- **Simple words:** a second register of the same facts (no degrees, shorter verbs), picked by a flag on the copy functions. Tests check that both registers cover every start reason, end reason and height.
+- **Meteor showers:**
+  - **Data:** the IMO working list (12 major showers), keyed by solar longitude so the table needs no yearly update.
+  - **Rate model:** ZHR × 10^(−slope·|Δλ|) × sin(radiant altitude) × moonlight factor, at the best 15-minute sample of full dark. The ideal figure is the top of the range and 30% of it the bottom ("maybe 4 to 14 an hour from a dark spot"), with a note that rates are rough.
+  - **Filters:** showers under 3 an hour, or with the radiant below 10°, are left out. At most one shower line per night.
+  - **Not yet checked:** the shower values are from the IMO working list as we know it. Checking them against the 2026 calendar PDF is a human task: we couldn't extract its text here.
+- **Nothing tonight:** the answer shows "Up instead": a Moon > 15% lit, else the brightest planet, else a shower. The next pass stays the linked footnote.
+- **Calendar:**
+  - The forecast now runs 15 days (about 0.2 s in the worker).
+  - "Add the next 2 weeks to my calendar" writes every good evening pass before bedtime as one `.ics`, each with a 10-minute alarm.
+  - Events more than 3 days out say their time can shift.
+- **Trust pages:**
+  - `/privacy/` and `/about/` are static Vite entry pages with the shared CSS and no app JS.
+  - The about page's "who makes it" paragraph is a draft for Ishaan to edit. It deliberately has no name or school.
+- **SEO:** sitemap, `robots.txt` sitemap line, `WebApplication` JSON-LD, a 1200×630 `og.png` rendered from original SVG (`scripts/render-og.mjs`), and canonical URLs on each page.

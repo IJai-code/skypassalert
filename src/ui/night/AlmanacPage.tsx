@@ -1,7 +1,8 @@
 // The Tonight tab, set like a page of an almanac printed for your town:
 // a running head, tonight's answer in large type (3-second rule), the pass as
 // a star-atlas chart beside the directions, then the whole night as a ruled
-// table you can open row by row.
+// table you can open row by row. Family settings (bedtime, simple words)
+// shape what the answer headlines and how it's worded (D-032).
 // Docs: docs/DESIGN.md#almanac
 import { lazy, Suspense, useMemo, useState } from 'react'
 import type { Forecast, ForecastPass } from '../../engine/index.ts'
@@ -12,10 +13,15 @@ import { passPeriod, passScore } from '../../engine/sky/schedule.ts'
 import { WORTH_IT } from '../../lib/state.ts'
 import { countdown, dayLabel, formatTime, timeParts, weekdayShort } from '../../lib/format.ts'
 import {
+  AFTER_BEDTIME,
   brightnessSentence,
   direction,
   endNote,
   fistsLabel,
+  METEOR_NOTE,
+  meteorPeakLabel,
+  meteorRate,
+  meteorSentence,
   minutesLabel,
   moonPhaseName,
   NIGHT_COPY,
@@ -27,11 +33,12 @@ import {
   whereInSky,
 } from '../../copy/en.ts'
 import { stationLong, type AnswerModel } from '../Answer.tsx'
-import { CalendarButton } from '../CalendarButton.tsx'
+import { CalendarButton, TwoWeeksLink } from '../CalendarButton.tsx'
+import { bedtimeLabel, type Family } from '../../lib/settings.ts'
 import { DataAge } from '../DataAge.tsx'
 import { Footer } from '../Chrome.tsx'
 import { TakeItOutside } from '../TakeItOutside.tsx'
-import { buildNight, passKey, type Stop } from './buildNight.ts'
+import { bestOtherThing, buildNight, passKey, type OtherThing, type Stop } from './buildNight.ts'
 import { chartLabel, PassChart } from './PassChart.tsx'
 
 const WaveBack = lazy(() => import('../wave/WaveBack.tsx'))
@@ -44,6 +51,8 @@ type Props = {
   nowMs: number
   nightMode: boolean
   onNightMode: (on: boolean) => void
+  family: Family
+  onFamily: () => void
   onChangePlace: () => void
   onFindIt: () => void
   onPhotograph: (targetId: string) => void
@@ -52,16 +61,18 @@ type Props = {
 }
 
 export function AlmanacPage(props: Props) {
-  const { forecast, model, place, nowMs } = props
+  const { forecast, model, place, nowMs, family } = props
+  const simple = family.simpleWords
   const tz = place.timeZone
   const focusMs = model.kind === 'focus' ? model.pass?.start.unixMs : undefined
   // Rebuild once a minute, not on every tick of the clock.
   const minute = Math.floor(nowMs / 60_000)
   const night = useMemo(
-    () => buildNight(forecast, minute * 60_000, focusMs),
-    [forecast, minute, focusMs],
+    () => buildNight(forecast, minute * 60_000, focusMs, family.bedtime),
+    [forecast, minute, focusMs, family.bedtime],
   )
   const [wave, setWave] = useState<ForecastPass | null>(null)
+  const other = night ? bestOtherThing(night) : null
 
   const hero = model.pass
   // On a night without a pass, the next one is a footnote, not the headline.
@@ -108,7 +119,16 @@ export function AlmanacPage(props: Props) {
         </span>
         <span className="shrink-0 uppercase">{dateHead}</span>
       </header>
-      <p className="mono mt-1.5 flex justify-end text-[0.75rem] text-ink-3">
+      <p className="mono mt-1.5 flex flex-wrap justify-end gap-x-4 gap-y-1 text-[0.75rem] text-ink-3">
+        <button
+          type="button"
+          onClick={props.onFamily}
+          aria-label={`Family settings: bedtime ${bedtimeLabel(family.bedtime)}, simple words ${simple ? 'on' : 'off'}`}
+          className="link"
+        >
+          Bedtime {bedtimeLabel(family.bedtime)}
+          {simple ? ' · simple words' : ''}
+        </button>
         <button
           type="button"
           onClick={() => props.onNightMode(!props.nightMode)}
@@ -137,6 +157,14 @@ export function AlmanacPage(props: Props) {
 
         {hero && !heroIsTonight ? (
           <>
+            {other && model.kind === 'not-tonight' && (
+              <UpInstead
+                thing={other}
+                tz={tz}
+                onFindIt={props.onFindIt}
+                onPhotograph={props.onPhotograph}
+              />
+            )}
             <p className="serif-i mt-3 text-[1.375rem] leading-snug text-ink-2">{model.sub}</p>
             <button
               type="button"
@@ -159,7 +187,7 @@ export function AlmanacPage(props: Props) {
               </p>
             )}
             <p className="serif-i mt-4 text-[1.5rem] leading-[1.18] text-pretty">
-              <Emphasised text={pathSentence(hero)} />
+              <Emphasised text={pathSentence(hero, simple)} />
             </p>
 
             <div className="mt-6 grid grid-cols-1 items-start gap-4 min-[340px]:grid-cols-[150px_1fr]">
@@ -173,6 +201,7 @@ export function AlmanacPage(props: Props) {
                 pass={hero}
                 sunsetAz={sunsetAz(hero)}
                 dawn={passPeriod(hero, tz) === 'before-dawn'}
+                simple={simple}
               />
             </div>
 
@@ -196,9 +225,22 @@ export function AlmanacPage(props: Props) {
             )}
           </>
         ) : (
-          <p className="serif-i mt-3 text-[1.375rem] text-ink-2">
-            No good passes in the next week. The Moon and planets are below.
-          </p>
+          <>
+            {other && (
+              <UpInstead
+                thing={other}
+                tz={tz}
+                onFindIt={props.onFindIt}
+                onPhotograph={props.onPhotograph}
+              />
+            )}
+            <p className="serif-i mt-3 text-[1.375rem] text-ink-2">
+              No good passes in the next week{other ? '.' : '. A quiet sky tonight.'}
+            </p>
+          </>
+        )}
+        {model.late && (
+          <LateNote pass={model.late} tz={tz} onOpen={() => props.onFocus(model.late ?? null)} />
         )}
       </section>
 
@@ -222,6 +264,7 @@ export function AlmanacPage(props: Props) {
                   nowMs={nowMs}
                   sunsetAz={night.night.evening.sunsetAzDeg}
                   minuteOf={minuteOf}
+                  simple={simple}
                   onWave={setWave}
                   onFindIt={props.onFindIt}
                   onPhotograph={props.onPhotograph}
@@ -261,9 +304,16 @@ export function AlmanacPage(props: Props) {
             </li>
           )}
         </ul>
-        <button type="button" onClick={props.onWeek} className="link mt-4 text-[1rem]">
+        <button type="button" onClick={props.onWeek} className="link mt-4 block text-[1rem]">
           Every pass this week →
         </button>
+        <TwoWeeksLink
+          passes={forecast.passes}
+          placeName={place.name}
+          timeZone={tz}
+          bedtime={family.bedtime}
+          nowMs={nowMs}
+        />
       </section>
 
       <div className="mt-10 space-y-8">
@@ -320,7 +370,10 @@ export function BigTime({ ms, tz }: { ms: number; tz: string }) {
 
 /** The part of the path sentence that makes a pass worth it, in amber. */
 function Emphasised({ text }: { text: string }) {
-  const m = /(passes straight overhead|almost straight overhead|high in the [a-z-]+)/.exec(text)
+  const m =
+    /(passes straight overhead|almost straight overhead|(?:almost )?right over your head|high in the [a-z-]+)/.exec(
+      text,
+    )
   if (!m) return <>{text}</>
   const i = m.index
   return (
@@ -336,17 +389,19 @@ function Directions({
   pass: p,
   sunsetAz,
   dawn,
+  simple = false,
 }: {
   pass: ForecastPass
   sunsetAz: number | null
   dawn: boolean
+  simple?: boolean
 }) {
-  const note = endNote(p)
+  const note = endNote(p, simple)
   return (
     <div className="space-y-2 text-[0.9375rem] leading-snug text-ink-2">
-      <p>{startCue(p, sunsetAz, !dawn)}</p>
+      <p>{startCue(p, sunsetAz, !dawn, simple)}</p>
       <p>
-        {brightnessSentence(p.brightestMagnitude)} About{' '}
+        {brightnessSentence(p.brightestMagnitude, simple)} About{' '}
         {minutesLabel(p.end.unixMs - p.start.unixMs)}.
       </p>
       {note && <p>{note}</p>}
@@ -366,6 +421,8 @@ function stopTitle(s: Stop): string {
       return 'The Moon'
     case 'planet':
       return PLANET_NAMES[s.planet.id] ?? s.planet.id
+    case 'meteor':
+      return s.shower.name
     case 'sunrise':
       return 'Sunrise'
   }
@@ -382,14 +439,20 @@ function stopFigure(s: Stop): string {
       return `${Math.round(s.moon.illumination * 100)}% lit`
     case 'planet':
       return `${compass16(s.planet.azDeg)} ${fistsLabel(s.planet.elDeg)}`
+    case 'meteor':
+      return meteorRate(s.shower.rateLow, s.shower.rateHigh)
     default:
       return ''
   }
 }
 
 function stopSubtitle(s: Stop): string | null {
-  if (s.kind === 'pass') return s.dawn ? 'early risers' : s.weak ? 'low or faint' : null
+  if (s.kind === 'pass')
+    return s.dawn ? 'early risers' : s.late ? AFTER_BEDTIME : s.weak ? 'low or faint' : null
   if (s.kind === 'planet') return 'highest'
+  // Only near the peak is it worth a word on the line; the detail says the rest.
+  if (s.kind === 'meteor')
+    return Math.abs(s.shower.peakInDays) <= 1 ? meteorPeakLabel(s.shower.peakInDays) : null
   return null
 }
 
@@ -400,6 +463,7 @@ function StopRow({
   nowMs,
   sunsetAz,
   minuteOf,
+  simple,
   onWave,
   onFindIt,
   onPhotograph,
@@ -410,11 +474,13 @@ function StopRow({
   nowMs: number
   sunsetAz: number | null
   minuteOf: (ms: number) => string
+  simple: boolean
   onWave: (p: ForecastPass) => void
   onFindIt: () => void
   onPhotograph: (id: string) => void
 }) {
-  const station = s.kind === 'pass'
+  // Passes after bedtime keep their line but drop the station's amber.
+  const station = s.kind === 'pass' && !s.late
   const sub = stopSubtitle(s)
   const line = (
     <span
@@ -445,7 +511,7 @@ function StopRow({
       <div className="pb-4 pl-[4rem] text-[0.9375rem] leading-snug text-ink-2">
         {s.kind === 'pass' ? (
           <>
-            <p className="text-ink">{pathSentence(s.pass)}</p>
+            <p className="text-ink">{pathSentence(s.pass, simple)}</p>
             <div className="mt-3 space-y-3">
               <PassChart
                 pass={s.pass}
@@ -454,7 +520,7 @@ function StopRow({
                 formatMinute={minuteOf}
                 label={chartLabel(s.pass)}
               />
-              <Directions pass={s.pass} sunsetAz={sunsetAz} dawn={s.dawn} />
+              <Directions pass={s.pass} sunsetAz={sunsetAz} dawn={s.dawn} simple={simple} />
             </div>
             {s.weak && <p className="mt-2">{NIGHT_COPY.weakPass}</p>}
             <p className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-ink">
@@ -465,6 +531,13 @@ function StopRow({
                 <CalendarButton pass={s.pass} placeName={placeName} timeZone={tz} />
               )}
             </p>
+          </>
+        ) : s.kind === 'meteor' ? (
+          <>
+            <p>
+              {capitalise(meteorPeakLabel(s.shower.peakInDays))}. {meteorSentence(s.shower)}
+            </p>
+            <p className="mt-2 text-[0.8125rem] text-ink-3">{METEOR_NOTE}</p>
           </>
         ) : s.kind === 'moon' || s.kind === 'planet' ? (
           <>
@@ -497,3 +570,63 @@ function StopRow({
 }
 
 const capitalise = (x: string) => x.charAt(0).toUpperCase() + x.slice(1)
+
+/** A better pass after bedtime: a footnote, never the headline. */
+function LateNote({ pass, tz, onOpen }: { pass: ForecastPass; tz: string; onOpen: () => void }) {
+  return (
+    <button type="button" onClick={onOpen} className="mono mt-5 block text-left text-[0.8125rem]">
+      <span className="text-ink-3">After bedtime · </span>
+      <span className="link text-ink-2">
+        {formatTime(pass.start.unixMs, tz).toLowerCase()} · {stationName(pass.noradId).short},{' '}
+        {fistsLabel(pass.peak.elDeg)} up →
+      </span>
+    </button>
+  )
+}
+
+/** On a night without a good pass: the best other thing to step out for. */
+function UpInstead({
+  thing,
+  tz,
+  onFindIt,
+  onPhotograph,
+}: {
+  thing: OtherThing
+  tz: string
+  onFindIt: () => void
+  onPhotograph: (id: string) => void
+}) {
+  const s = thing.stop
+  const title = stopTitle(s)
+  const line =
+    s.kind === 'moon'
+      ? `${moonPhaseName(s.moon.illumination, s.moon.waxing)}, ${whereInSky(s.moon.azDeg, s.moon.elDeg)}.`
+      : s.kind === 'planet'
+        ? `${capitalise(whereInSky(s.planet.azDeg, s.planet.elDeg))}. ${planetLine(s.planet.magnitude)}`
+        : meteorSentence(s.shower)
+  const photo = s.kind === 'moon' ? 'moon' : s.kind === 'planet' ? s.planet.id : null
+  return (
+    <div className="mt-6 border-y border-rule py-4">
+      <p className="mono-caps text-ink-3">Up instead</p>
+      <p className="serif mt-1 text-[2.25rem] leading-none">
+        {title}
+        <span className="serif-i text-[0.6em] text-ink-2">
+          {' '}
+          {s.kind === 'moon' ? 'at' : s.kind === 'planet' ? 'highest at' : 'best at'}{' '}
+          {formatTime(s.atMs, tz).toLowerCase()}
+        </span>
+      </p>
+      <p className="mt-2 text-[0.9375rem] leading-snug text-ink-2">{line}</p>
+      <p className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+        <button type="button" onClick={onFindIt} className="link">
+          Find it
+        </button>
+        {photo && (
+          <button type="button" onClick={() => onPhotograph(photo)} className="link">
+            Photograph
+          </button>
+        )}
+      </p>
+    </div>
+  )
+}

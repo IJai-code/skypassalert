@@ -14,6 +14,8 @@ export type AnswerModel = {
   /** Shown instead of a time when there's nothing tonight. */
   headline?: string
   sub?: string
+  /** A clearly better pass after bedtime, mentioned in a footnote (D-032). */
+  late?: ForecastPass | null
 }
 
 export function answerModel(
@@ -44,7 +46,12 @@ export function answerModel(
         eyebrow: `Get ready · ${countdown(state.pass.start.unixMs - nowMs)}`,
       }
     case 'tonight':
-      return { kind: state.kind, pass: state.pass, eyebrow: `Tonight in ${placeName}` }
+      return {
+        kind: state.kind,
+        pass: state.pass,
+        eyebrow: `Tonight in ${placeName}`,
+        late: state.late,
+      }
     case 'just-ended':
       return {
         kind: state.kind,
@@ -64,6 +71,7 @@ export function answerModel(
           : 'Nothing this week',
         headline: 'No station tonight.',
         sub: 'The stations come in runs of a week or two. Here’s the next one.',
+        late: state.late,
       }
   }
 }

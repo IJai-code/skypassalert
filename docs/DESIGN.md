@@ -1,19 +1,28 @@
 # Design
 
-How SkyPassAlert looks, sounds and behaves, and why. Every rule traces to something we observed or measured. Last reviewed 2026-11-03 (Phase 2.9).
+How SkyPassAlert looks, sounds and behaves, and why. Every rule traces to something we observed or measured. Last reviewed 2026-11-06 (Phase 3a).
 
 ## 0. Current direction: The Almanac (2026-11-03, D-031)
 **The app reads like an astronomical almanac printed for your town tonight.** It replaces The Night (D-029), which Ishaan judged "standard AI": glass pills, filled pill buttons, a grotesk time and a floating tab bar.
 
 <a id="almanac"></a>
 - **Tonight tab** (`src/ui/night/AlmanacPage.tsx`), top to bottom:
-  - **Running head:** place (a link to change it), coordinates, date, over a cream rule. "Red light off/on" under it.
+  - **Running head:** place (a link to change it), coordinates, date, over a cream rule. Under it: "Bedtime 9:30 pm" (opens the family sheet; adds "· simple words" when on) and "Red light off/on".
   - **The answer** (3-second rule): a mono kicker "Tonight in Fremont, CA" with the station's full name; the time in Instrument Serif at up to 9rem with an italic "pm"; a mono countdown; the path sentence in italic with its key phrase ("almost straight overhead") in amber.
   - **Chart and directions:** `PassChart` beside the start cue, brightness and the fade note.
   - **Links:** Find it in the sky → (amber) · Remind me · Their view.
   - **Tonight, hour by hour:** a ruled table of `buildNight()` stops (mono time · event · one figure). Station lines are amber. Each line opens in place.
-  - **Later this week**, then data age, the QR panel on desktop, and the footer.
-  - **No-pass nights:** the serif headline "No station tonight.", an italic sub, and the next pass as one linked mono line.
+  - **Later this week**, "Add the next 2 weeks to my calendar" with a mono sub-line (count, bedtime, the drift warning), then data age, the QR panel on desktop, and the footer (About · Privacy · …).
+  - **No-pass nights:** the serif headline "No station tonight.", then an **Up instead** block between rules (mono kicker; the object in serif with an italic "highest at 9:46 pm"; where and how bright; Find it / Photograph), then the italic sub and the next pass as one linked mono line.
+  - **After bedtime:** a better pass after bedtime is one mono footnote under the answer ("After bedtime · 10:12 pm · ISS, 7 fists up →"), never the headline. In the table and Week such passes lose their amber and carry an italic "after bedtime".
+  - **Meteor line:** shower name · mono "4–14/h". The italic subtitle appears only within a day of the peak ("peak tonight"); the opened line gives the peak, the range, where the radiant is and the uncertainty note.
+
+<a id="family"></a>
+- **Family sheet** (`src/ui/app/FamilySheet.tsx`): the same bottom-sheet shell as the place picker. "Lights out at" uses the native time input (mono, underlined); "Any time" is a text toggle; "Simple words off/on" is a text link. "Saved on this phone only."
+
+<a id="og-image"></a>
+- **Link preview** (`public/og.png`, 1200×630): "Look up *tonight.*" in the serif, a mono running head, and a star-atlas chart with an illustrative path. Re-render with `node scripts/render-og.mjs <ttf-dir>` after converting `public/fonts/*.woff2` to TTF with fontTools (`TTFont(path).flavor = None`), because resvg doesn't read woff2.
+- **/privacy/ and /about/:** static pages in the same type and rules, with no app JS.
 - **`PassChart`** (SVG, from `pass.track`): a star-atlas plate. Edge = horizon, centre = straight up, north up and east right. It has rings at 30°/60°, cardinal ticks, a "sun" tick where the sun set, minute dots, start/peak/end times placed to avoid collisions, and a dashed tail when the pass ends in Earth's shadow. It is drawn at 44 px with no labels as the Week glyph.
 - **Week:** italic day headings, ruled rows (glyph · mono time · station · fists, from→to, minutes). Evenings / Before dawn / All are underlined text tabs.
 - **Wave Back:** ruled header, an engraved globe (cream coastlines on night paper, no glow), ruled footer with the serif time and the italic sentence.

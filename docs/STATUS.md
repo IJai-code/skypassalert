@@ -1,6 +1,6 @@
 # Status
 
-_Last updated: 2026-11-02, Phase 2.8 (The Night + Wave Back) in review._
+_Last updated: 2026-11-06, Phase 3a (Family night) in review, stacked on Phase 2.9 (PR #11)._
 
 ## Done
 ### Phase 1: Foundation (merged)
@@ -100,12 +100,22 @@ Public repo, CI, the Pages deploy at https://skypassalert.com (HTTPS enforced, w
 - **Week, Wave Back, Sky tab, sheets:** restyled to match. The scrolling sky, rail, thumbnails, icons and photos are retired.
 - **Needs a real phone:** legibility of the italic outdoors, red mode, and the wave card share.
 
-## Next: Phase 3 (MVP v0.1)
-- ~~Place picker~~: done early (D-026).
-- Family mode settings (bedtime, kid wording); zh-Hans catalog for all copy.
-- ~~Share card PNG with QR code~~: done early as the wave card (D-030); 14-day `.ics`.
-- /privacy, /about, SEO basics; pre-rendered first paint for the default place.
-- Soft launch to about 10 families.
+### Phase 3a: Family night (2026-11-06, PR in review; D-032)
+- **Bedtime** (default 9:30 pm, on the device): passes after it are listed and marked, never headlined. A clearly better late pass gets a footnote.
+- **Simple words:** a kid register of every pass sentence, with the same facts.
+- **Meteor showers:** 12 IMO major showers, keyed by solar longitude. Tonight's best shower is a table line with an honest rate range, where to look, and the Moon's effect. Learn chapter 15.
+- **Up instead:** on nights with no good pass, the answer shows the Moon, the brightest planet, or a shower.
+- **Two weeks in your calendar:** one `.ics` with every good evening pass before bedtime, each with an alarm. Far-off events warn that times can shift.
+- **/privacy/ and /about/:** static pages with no app JS. Footer links.
+- **SEO:** sitemap, JSON-LD, `og.png` link preview from original SVG.
+- **Wording fix:** passes that end because dawn brightens the sky no longer say "sets".
+- **Numbers:** 273 tests; initial JS 106.7 KB (budget 150); forecast 15 days in ~0.2 s; Lighthouse 97 / 100 / 100 / 100 on `/`, 100 ×4 on `/privacy/` and `/about/`.
+
+## Next: Phase 3b (MVP v0.1, continued)
+- zh-Hans: move all copy into a catalog, then translate, marked needs-native-review.
+- Pre-rendered first paint for the default place.
+- Real-device smoke test (iPhone Safari, Android Chrome, WeChat), then a soft launch to about 10 families.
+- ~~Place picker~~ (D-026), ~~share card~~ (D-030), ~~14-day `.ics`, family mode, meteors, /privacy, /about, SEO basics~~ (D-032): done.
 
 ## Human tasks pending
 | Who | Task |
@@ -113,6 +123,10 @@ Public repo, CI, the Pages deploy at https://skypassalert.com (HTTPS enforced, w
 | **Ishaan** | **Tonight (Sat 2026-10-24), Fremont:** step outside at **7:32 PM**, face where the sun went down, look one fist to the left. Tiangong climbs almost straight overhead (80°) and fades out high in the east-northeast at 7:36:56. Note what you see in `FIELD_LOG.md`. |
 | Ishaan | Read through the merged PR's "Read this first" list. Run `npm run lab:seasons` (write your prediction first). |
 | Ishaan | **Outdoors with a phone:** tap "Find it in the sky", allow motion, and check that the drawn stars and Moon line up with the real ones. Try "Fix compass" with the Moon. On iPhone, Android, and inside WeChat. Note anything off. |
+| **Ishaan** | **/about:** edit the "Who makes it" paragraph (`about/index.html`, marked `data-draft`). Decide what, if anything, to say about yourself. |
+| Ishaan | **Check the meteor table:** open the IMO 2026 calendar (imo.net, "Meteor Shower Calendar 2026", Table 5) and compare its dates, λ☉, radiants and ZHRs with `src/engine/meteors/showers.ts`. We couldn't extract the PDF text here. |
+| Ishaan | **Leonids, night of 16–17 Nov:** step out before dawn, count meteors for 15 minutes, compare with the app's range, and note it in `FIELD_LOG.md`. |
+| Ishaan | On a phone: set a bedtime, turn on simple words, and add the next 2 weeks to the calendar. Check that the alarms appear. |
 | Parent | (From Phase 1, if not done) Porkbun email forwarding for `hello@skypassalert.com`. |
 | Ishaan (optional) | If you add a `main` ruleset requiring PRs, add **GitHub Actions** to its bypass list, or the Data workflow's commits will be rejected. |
 

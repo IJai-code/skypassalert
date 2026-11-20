@@ -27,9 +27,15 @@ export function Footer() {
       </p>
       <p className="mt-3 max-w-prose">
         Orbits: CelesTrak. Cities: © GeoNames (CC BY 4.0). Stars: Yale Bright Star Catalogue.
-        Compass: NOAA World Magnetic Model. Maps: Natural Earth.
+        Compass: NOAA World Magnetic Model. Maps: Natural Earth. Meteor showers: IMO.
       </p>
       <p className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
+        <a className="link text-ink-2 hover:text-ink" href="/about/">
+          About
+        </a>
+        <a className="link text-ink-2 hover:text-ink" href="/privacy/">
+          Privacy
+        </a>
         <a
           className="link text-ink-2 hover:text-ink"
           href={`${REPO}/blob/main/docs/accuracy/phase2.md`}

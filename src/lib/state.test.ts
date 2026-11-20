@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { homeState } from './state.ts'
+import { isAfterBedtime } from './settings.ts'
 import { forecast } from '../engine/predict.ts'
 import type { OmmElements } from '../engine/index.ts'
 import elements from '../engine/__fixtures__/stations-2026-10-24.json'
@@ -54,5 +55,26 @@ describe('home screen states (Fremont, week of 2026-10-24)', () => {
         expect(Number(hour)).toBeGreaterThanOrEqual(12)
       }
     }
+  })
+
+  it('bedtime: a pass after it is a footnote, never the headline', () => {
+    const t = Date.parse('2026-10-24T20:00:00Z') // 1 PM PDT; Tiangong at 7:32 PM
+    const early = homeState(f, t, { bedtime: '19:00' })
+    expect(early.kind).toBe('not-tonight')
+    if (early.kind === 'not-tonight') {
+      expect(early.late?.noradId).toBe(48274)
+      // The next good look must also be before 7 PM.
+      expect(early.next).not.toBeNull()
+      if (early.next)
+        expect(isAfterBedtime(early.next.start.unixMs, FREMONT.timeZone, '19:00')).toBe(false)
+    }
+    const usual = homeState(f, t, { bedtime: '21:30' })
+    expect(usual.kind).toBe('tonight')
+    if (usual.kind === 'tonight') expect(usual.late).toBeNull()
+  })
+  it('bedtime never hides a pass that is up right now', () => {
+    expect(homeState(f, Date.parse('2026-10-25T02:34:30Z'), { bedtime: '19:00' }).kind).toBe(
+      'look-now',
+    )
   })
 })

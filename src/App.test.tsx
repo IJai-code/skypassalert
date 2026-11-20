@@ -11,6 +11,7 @@ vi.mock('./lib/predict.ts', () => ({
 }))
 
 beforeEach(() => {
+  localStorage.clear()
   // Saturday 2026-10-24, 1:00 PM in Fremont.
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-10-24T20:00:00Z'))
@@ -124,5 +125,45 @@ describe('the app', () => {
     await screen.findByRole('dialog')
     results = await axe.run(document.body, opts)
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([])
+  })
+
+  it('family settings: simple words, and a bedtime that moves the headline', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: /tonight in fremont/i })
+    fireEvent.click(screen.getByRole('button', { name: /family settings: bedtime 9:30 pm/i }))
+    const sheet = await screen.findByRole('dialog', { name: /for the family/i })
+    fireEvent.click(within(sheet).getByRole('button', { name: /simple words off/i }))
+    const hero = () => screen.getByRole('region', { name: /tonight in fremont|no station/i })
+    const said = (re: RegExp) => (_: string, el: Element | null) =>
+      el?.tagName === 'P' && re.test(el.textContent ?? '')
+    expect(within(hero()).getByText(said(/goes almost right over your head/))).toBeInTheDocument()
+
+    // Lights out at 7 PM: the 7:32 PM pass becomes a footnote, and the Moon leads.
+    fireEvent.change(within(sheet).getByLabelText(/lights out at/i), {
+      target: { value: '19:00' },
+    })
+    expect(await screen.findByText('No station tonight.')).toBeInTheDocument()
+    expect(screen.getByText(/after bedtime ·/i)).toBeInTheDocument()
+    expect(screen.getByText(/up instead/i)).toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem('spa:family') ?? '{}')).toEqual({
+      bedtime: '19:00',
+      simpleWords: true,
+    })
+  })
+
+  it('offers two weeks of good evenings in one calendar file', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: /tonight in fremont/i })
+    expect(
+      screen.getByRole('button', { name: /add the next 2 weeks to my calendar/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/all before bedtime/i)).toBeInTheDocument()
+  })
+
+  it('links to the privacy and about pages', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: /tonight in fremont/i })
+    expect(screen.getByRole('link', { name: /^privacy$/i })).toHaveAttribute('href', '/privacy/')
+    expect(screen.getByRole('link', { name: /^about$/i })).toHaveAttribute('href', '/about/')
   })
 })

@@ -12,3 +12,10 @@ if (typeof HTMLCanvasElement !== 'undefined') {
   HTMLCanvasElement.prototype.getContext = (() =>
     null) as unknown as HTMLCanvasElement['getContext']
 }
+
+// jsdom's <dialog> lacks showModal(): open it the simple way so sheets render.
+if (typeof HTMLDialogElement !== 'undefined' && !HTMLDialogElement.prototype.showModal) {
+  HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+    this.setAttribute('open', '')
+  }
+}

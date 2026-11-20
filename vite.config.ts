@@ -20,6 +20,14 @@ export default defineConfig({
   build: {
     target: 'es2022',
     sourcemap: true,
+    // The app plus two static pages that ship no app JavaScript (D-032).
+    rollupOptions: {
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        privacy: fileURLToPath(new URL('./privacy/index.html', import.meta.url)),
+        about: fileURLToPath(new URL('./about/index.html', import.meta.url)),
+      },
+    },
   },
   test: {
     environment: 'jsdom',
