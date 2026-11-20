@@ -79,7 +79,7 @@ Public repo, CI, the Pages deploy at https://skypassalert.com (HTTPS enforced, w
 - **Calendar:** "Add this week's best to my calendar" as one file.
 - **Numbers:** 223 tests; initial JS 105 KB; Lighthouse 97 / 100 / 100 / 100.
 
-### Phase 2.8: The Night + Wave Back (2026-11-02, PR in review)
+### Phase 2.8: The Night + Wave Back (2026-11-02, merged)
 - **The Night:** the Tonight tab is one scroll through the night over the real sky.
   - Pass stops scrub the station along its path.
   - A time rail shows real times.
@@ -93,6 +93,12 @@ Public repo, CI, the Pages deploy at https://skypassalert.com (HTTPS enforced, w
 - **Tabs:** 3 (Tonight, Sky with Find/Photograph, Week). Teal cards are retired for near-black night and glass chrome.
 - **Numbers:** 242 tests; initial JS 105.7 KB (budget 150); Wave Back is a 6.4 KB lazy chunk plus 17 KB of Earth data on first flip; Lighthouse 98 / 100 / 100 / 100.
 - **Needs a real phone:** scroll feel, the share sheet (iOS / Android / WeChat), and night mode outdoors.
+
+### Phase 2.9: The Almanac (2026-11-03, PR in review)
+- **Look:** the whole app is set like a printed star almanac: serif times, mono figures, cream on blue-black, hairline rules, text links (D-031). Chosen by Ishaan from three mockups.
+- **Tonight:** running head, the answer, a star-atlas chart of the pass beside the directions, the night as a ruled table that opens line by line, and the next good evenings.
+- **Week, Wave Back, Sky tab, sheets:** restyled to match. The scrolling sky, rail, thumbnails, icons and photos are retired.
+- **Needs a real phone:** legibility of the italic outdoors, red mode, and the wave card share.
 
 ## Next: Phase 3 (MVP v0.1)
 - ~~Place picker~~: done early (D-026).

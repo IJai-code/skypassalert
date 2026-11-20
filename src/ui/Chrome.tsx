@@ -20,33 +20,26 @@ export function Header({ placeName, dateLabel }: { placeName: string; dateLabel:
 
 export function Footer() {
   return (
-    <footer className="mt-12 border-t border-hair pt-6 pb-8 text-[0.8125rem] leading-relaxed text-ink-3">
+    <footer className="mt-12 border-t border-ink pt-4 pb-8 text-[0.8125rem] leading-relaxed text-ink-3">
       <p className="max-w-prose">
         Free, open source, no ads, no accounts, no cookies. Predictions are computed on your phone;
         your location never leaves it. Estimates for sky-watching, not for safety-critical use.
       </p>
       <p className="mt-3 max-w-prose">
         Orbits: CelesTrak. Cities: © GeoNames (CC BY 4.0). Stars: Yale Bright Star Catalogue.
-        Compass: NOAA World Magnetic Model. Maps: Natural Earth. Photos: NASA (public domain; no
-        endorsement implied).
+        Compass: NOAA World Magnetic Model. Maps: Natural Earth.
       </p>
       <p className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
         <a
-          className="text-ink-2 underline decoration-hair-strong underline-offset-4 hover:text-ink"
+          className="link text-ink-2 hover:text-ink"
           href={`${REPO}/blob/main/docs/accuracy/phase2.md`}
         >
           How accurate is it?
         </a>
-        <a
-          className="text-ink-2 underline decoration-hair-strong underline-offset-4 hover:text-ink"
-          href={REPO}
-        >
+        <a className="link text-ink-2 hover:text-ink" href={REPO}>
           Source code
         </a>
-        <a
-          className="text-ink-2 underline decoration-hair-strong underline-offset-4 hover:text-ink"
-          href="mailto:hello@skypassalert.com"
-        >
+        <a className="link text-ink-2 hover:text-ink" href="mailto:hello@skypassalert.com">
           hello@skypassalert.com
         </a>
       </p>

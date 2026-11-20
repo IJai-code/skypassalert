@@ -13,6 +13,10 @@ import { postcardView } from '../stageView.ts'
 import { drawGlobe } from './drawGlobe.ts'
 import type { Earth } from './earth.ts'
 
+// The almanac's faces (D-031), loaded before drawing below.
+const SERIF = "'Instrument Serif', Georgia, serif"
+const MONO = "'Plex Mono', ui-monospace, Menlo, monospace"
+
 const W = 1080
 const H = 1350
 
@@ -43,6 +47,14 @@ export async function renderWaveCard(c: Card): Promise<Blob> {
   if (!ctx) throw new Error('no 2d context')
   const tz = c.place.timeZone
   const half = 600
+  // Canvas text doesn't wait for web fonts: load the card's faces first.
+  await Promise.all(
+    [
+      "400 84px 'Instrument Serif'",
+      "italic 400 38px 'Instrument Serif'",
+      "500 26px 'Plex Mono'",
+    ].map((f) => document.fonts?.load(f).catch(() => [])),
+  )
 
   // Top: your sky, facing the pass, with its path minute by minute.
   ctx.save()
@@ -93,50 +105,38 @@ export async function renderWaveCard(c: Card): Promise<Blob> {
 
   // Words.
   const name = stationName(c.pass.noradId).short
-  ctx.fillStyle = 'rgba(0,0,0,0.55)'
-  ctx.fillRect(0, half - 2, W, 4)
-  shadowText(
-    ctx,
-    'YOU LOOKED UP',
-    56,
-    84,
-    '600 30px system-ui, sans-serif',
-    'rgba(236,242,247,0.85)',
-  )
+  ctx.fillStyle = 'rgba(233,228,214,0.9)'
+  ctx.fillRect(0, half - 1, W, 2)
+  shadowText(ctx, 'YOU LOOKED UP', 56, 84, `500 26px ${MONO}`, 'rgba(233,228,214,0.85)')
   shadowText(
     ctx,
     `${name} · ${formatTime(c.pass.start.unixMs, tz)}`,
     56,
     150,
-    '800 64px system-ui, sans-serif',
-    '#ffffff',
+    `400 84px ${SERIF}`,
+    '#e9e4d6',
   )
   shadowText(
     ctx,
     `${formatDate(c.pass.start.unixMs, tz)} · ${c.place.name}`,
     56,
     200,
-    '500 30px system-ui, sans-serif',
-    'rgba(236,242,247,0.85)',
+    `italic 400 38px ${SERIF}`,
+    'rgba(233,228,214,0.85)',
   )
-  shadowText(
-    ctx,
-    'THEY LOOKED DOWN',
-    56,
-    half + 70,
-    '600 30px system-ui, sans-serif',
-    'rgba(236,242,247,0.85)',
-  )
+  shadowText(ctx, 'THEY LOOKED DOWN', 56, half + 70, `500 26px ${MONO}`, 'rgba(233,228,214,0.85)')
 
-  ctx.fillStyle = 'rgba(0,0,0,0.6)'
+  ctx.fillStyle = '#0d1118'
   ctx.fillRect(0, H - 150, W, 150)
-  ctx.font = '700 34px system-ui, sans-serif'
+  ctx.fillStyle = 'rgba(233,228,214,0.9)'
+  ctx.fillRect(0, H - 150, W, 2)
+  ctx.font = `500 32px ${MONO}`
   ctx.fillStyle = '#ffc65c'
   ctx.textBaseline = 'alphabetic'
   ctx.textAlign = 'left'
   ctx.fillText('skypassalert.com', 56, H - 62)
-  ctx.font = '500 26px system-ui, sans-serif'
-  ctx.fillStyle = 'rgba(236,242,247,0.8)'
+  ctx.font = `italic 400 34px ${SERIF}`
+  ctx.fillStyle = 'rgba(233,228,214,0.85)'
   ctx.fillText('Look up tonight. Free, no account.', 56, H - 100)
   try {
     const qr = await loadImage('/qr.svg')

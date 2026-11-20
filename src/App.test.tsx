@@ -41,29 +41,35 @@ describe('the app', () => {
     render(<App />)
     expect(await screen.findByRole('heading', { name: /tonight in fremont/i })).toBeInTheDocument()
     const hero = screen.getByRole('region', { name: /tonight in fremont/i })
-    expect(within(hero).getByText('7:32')).toBeInTheDocument()
+    expect(within(hero).getByText('7:32', { selector: 'p > span' })).toBeInTheDocument()
+    expect(within(hero).getByRole('img', { name: /sky chart of the path/i })).toBeInTheDocument()
     expect(within(hero).getByText(/tiangong, china’s space station/i)).toBeInTheDocument()
     expect(within(hero).getByText(/rises low in the west-southwest/i)).toBeInTheDocument()
-    expect(within(hero).getByRole('button', { name: /find it/i })).toBeInTheDocument()
+    expect(within(hero).getByRole('button', { name: /find it in the sky/i })).toBeInTheDocument()
     expect(within(hero).getByRole('button', { name: /remind me/i })).toBeInTheDocument()
     expect(within(hero).getByRole('button', { name: /their view/i })).toBeInTheDocument()
   })
 
-  it('scrolls through the night: sunset, the pass, the planets, sunrise', async () => {
+  it('sets the night as a table: sunset, the pass, sunrise, each line opening', async () => {
     render(<App />)
     await screen.findByRole('heading', { name: /tonight in fremont/i })
-    expect(screen.getByRole('region', { name: /^sunset, 6:\d\d pm/i })).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: /^tiangong, 7:32 pm/i })).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: /^sunrise/i })).toBeInTheDocument()
-    const rail = screen.getByRole('navigation', { name: /jump to a time tonight/i })
-    expect(within(rail).getByRole('button', { name: /^tiangong, 7:32 pm/i })).toBeInTheDocument()
+    const table = screen.getByRole('region', { name: /tonight, hour by hour/i })
+    expect(within(table).getByText('Sunset')).toBeInTheDocument()
+    expect(within(table).getByText('Sunrise')).toBeInTheDocument()
+    const pass = within(table).getByLabelText(/^tiangong, 7:32 pm/i)
+    fireEvent.click(pass)
+    const details = pass.closest('details')
+    expect(details).not.toBeNull()
+    if (!details) return
+    expect(within(details).getByRole('button', { name: /their view/i })).toBeInTheDocument()
+    expect(within(details).getByRole('img', { name: /sky chart of the path/i })).toBeInTheDocument()
   })
 
   it('explains how to find a pass, anchored to sunset', async () => {
     render(<App />)
     await screen.findByRole('heading', { name: /tonight in fremont/i })
-    const stop = screen.getByRole('region', { name: /^tiangong, 7:32 pm/i })
-    expect(within(stop).getByText(/where the sun went down/i)).toBeInTheDocument()
+    const hero = screen.getByRole('region', { name: /tonight in fremont/i })
+    expect(within(hero).getByText(/where the sun went down/i)).toBeInTheDocument()
   })
 
   it('shows the pass from the station: Earth below, why you can see it', async () => {

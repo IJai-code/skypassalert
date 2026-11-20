@@ -75,21 +75,17 @@ export function CaptureResult({ capture, onClose }: { capture: Capture; onClose:
       className="fixed inset-0 z-50 flex flex-col bg-black text-white"
     >
       <div className="flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),12px)] pb-2">
-        <button
-          type="button"
-          onClick={onClose}
-          className="hud-caps rounded-md bg-white/10 px-3 py-2"
-        >
+        <button type="button" onClick={onClose} className="mono-caps bg-white/10 px-3 py-2">
           Retake
         </button>
-        <p className="hud-caps text-white/60">
+        <p className="mono-caps text-white/60">
           {showBefore ? 'One raw frame' : 'Stacked & enhanced'}
         </p>
         <button
           type="button"
           onClick={() => void save()}
           disabled={busy}
-          className="hud-caps rounded-md bg-station px-3 py-2 text-black"
+          className="mono-caps bg-station px-3 py-2 text-black"
         >
           {busy ? 'Saving…' : 'Save / Share'}
         </button>
@@ -109,8 +105,8 @@ export function CaptureResult({ capture, onClose }: { capture: Capture; onClose:
         />
       </button>
       <div className="px-5 pt-3 pb-[max(env(safe-area-inset-bottom),18px)]">
-        <p className="hud text-lg font-semibold">{capture.caption}</p>
-        <p className="hud mt-1 text-[13px] text-white/60">{capture.info}</p>
+        <p className="mono text-lg font-semibold">{capture.caption}</p>
+        <p className="mono mt-1 text-[13px] text-white/60">{capture.info}</p>
         <p className="mt-2 text-xs text-white/45">
           Press and hold the photo to see one raw frame. Processed on your phone; nothing is
           uploaded.

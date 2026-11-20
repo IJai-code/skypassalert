@@ -1,31 +1,30 @@
 # Design
 
-How SkyPassAlert looks, sounds and behaves, and why. Every rule traces to something we observed or measured. Last reviewed 2026-10-24 (Phase 2).
+How SkyPassAlert looks, sounds and behaves, and why. Every rule traces to something we observed or measured. Last reviewed 2026-11-03 (Phase 2.9).
 
-## 0. Current direction: The Night (2026-11-02, D-029, D-030)
-**The page is the sky, and scrolling moves the clock.** It replaces the teal card stack (D-024), which kept our best asset, the real sky, in thumbnails.
+## 0. Current direction: The Almanac (2026-11-03, D-031)
+**The app reads like an astronomical almanac printed for your town tonight.** It replaces The Night (D-029), which Ishaan judged "standard AI": glass pills, filled pill buttons, a grotesk time and a floating tab bar.
 
-<a id="the-night"></a>
-- **Tonight tab** (`src/ui/night/`):
-  - The real sky (`drawSky`) is pinned full-screen behind the page.
-  - **Stops:** each stop is a moment of the night, built by `buildNight()`: sunset, first stars, each pass, the Moon, planets at their best, sunrise.
-  - **Glide:** between stops the clock and the view direction ease; the sky colour comes from the Sun's real altitude.
-  - **Pass stops scrub the pass:** scrolling moves the station along its real path, and the minute marks pass by.
-  - **First screen is the answer** (3-second rule): the time, the station, one sentence and three actions (Find it, Remind me, Their view).
-  - **No-pass nights:** the headline is "No station tonight." and the next pass is a small tappable footnote, never a giant time for another day.
-  - **Time rail** (right edge): real times scaled to the night, a tick per stop, dashed bedtime, and a cyan marker for the moment you're looking at. Tapping a tick jumps to that stop.
-- **Wave Back** (`src/ui/wave/`): every pass flips to Earth seen from above the station at that minute, with real day/night, the ground track (amber when sunlit, dashed in shadow), its horizon ring, your town, and a computed sentence saying why you can see it. A wave card shares both views.
-- **Sky tab:** the live view, with a Find / Photograph switch (the old Camera tab).
-- **Week tab:** hairline rows like a departure board; each row's picture is that pass's own sky.
+<a id="almanac"></a>
+- **Tonight tab** (`src/ui/night/AlmanacPage.tsx`), top to bottom:
+  - **Running head:** place (a link to change it), coordinates, date, over a cream rule. "Red light off/on" under it.
+  - **The answer** (3-second rule): a mono kicker "Tonight in Fremont, CA" with the station's full name; the time in Instrument Serif at up to 9rem with an italic "pm"; a mono countdown; the path sentence in italic with its key phrase ("almost straight overhead") in amber.
+  - **Chart and directions:** `PassChart` beside the start cue, brightness and the fade note.
+  - **Links:** Find it in the sky → (amber) · Remind me · Their view.
+  - **Tonight, hour by hour:** a ruled table of `buildNight()` stops (mono time · event · one figure). Station lines are amber. Each line opens in place.
+  - **Later this week**, then data age, the QR panel on desktop, and the footer.
+  - **No-pass nights:** the serif headline "No station tonight.", an italic sub, and the next pass as one linked mono line.
+- **`PassChart`** (SVG, from `pass.track`): a star-atlas plate. Edge = horizon, centre = straight up, north up and east right. It has rings at 30°/60°, cardinal ticks, a "sun" tick where the sun set, minute dots, start/peak/end times placed to avoid collisions, and a dashed tail when the pass ends in Earth's shadow. It is drawn at 44 px with no labels as the Week glyph.
+- **Week:** italic day headings, ruled rows (glyph · mono time · station · fists, from→to, minutes). Evenings / Before dawn / All are underlined text tabs.
+- **Wave Back:** ruled header, an engraved globe (cream coastlines on night paper, no glow), ruled footer with the serif time and the italic sentence.
+- **Sky tab:** the live sky is unchanged; its controls are square, solid and labelled in mono.
+- **Tab bar:** three mono words over a cream rule, the current one underlined.
 
-**Layout rules:**
-- Words sit **below the horizon**, on dark ground: horizon at 46% of the height on stops and 36% on the answer.
-- Big Archivo times (`clamp(5rem, 26vw, 8rem)` on the answer).
-- Body 17 px; tracked caps only for eyebrows.
-- **No cards:** chrome is glass (`.glass`) pills.
-- **Colour:** near-black night tokens. Amber = the station only; cyan = things you tap. The night-vision red mode is unchanged.
-- **Faint passes** are labelled "low or faint" in words, not faded (fading failed contrast checks).
-- **Motion** comes only from scrolling, and only for real data.
+**Type:** Instrument Serif (times, headlines, italic sentences), IBM Plex Mono (figures, tables, labels, sky labels), system sans for body text (17 px). `.serif`, `.serif-i`, `.mono`, `.mono-caps`, `.link` in `src/index.css`.
+
+**Colour:** paper `#0d1118`, ink `#e9e4d6` / `#b6b1a3` / `#908b7d`, rule `#2a2f39`. **Amber = the station** (and the link that finds it). Red night mode remaps every token.
+
+**Rules:** hairlines, not boxes. Square corners (dots excepted). Actions are underlined words. Every graphic is computed from the prediction.
 
 Sections 1–3 below record how we got here. The honesty and data-first principles still apply.
 
@@ -62,20 +61,24 @@ These are recognizable tells of generated, templated UIs; several were in our ow
 - The same large border-radius on every element.
 - Looping decorative animation (our Phase 1 hero dot is gone).
 - Vague copy ("Discover the cosmos!"). Write the specific thing.
+- Frosted-glass pills, filled pill buttons with leading icons, floating rounded tab bars (the stock dark-app kit; removed 2026-11-03).
+- Tracked-caps eyebrows with coloured status dots.
+- Text laid over a drawing it doesn't belong to; full-bleed gradient scrims to rescue its contrast.
 
 ## 4. Tokens (`src/index.css`)
 | Token | Value | Meaning |
 |---|---|---|
-| `--night` | `#080c1a` | page |
-| `--night-2` | `#0d1326` | the sky map disc, hovered rows |
-| `--hair` / `--hair-strong` | 16% / 30% blue-grey | dividers, outlines |
-| `--ink` / `--ink-2` / `--ink-3` | `#eceff7` / `#a9b2cc` / `#737c99` | primary / secondary / labels |
-| **`--station`** | `#ffc65c` | **the station, and nothing else**: its dot, its path, its bar on the timeline |
-| `--sky-day` … `--sky-astro` | four blues | sky darkness on the tonight strip |
+| `--night` | `#0d1118` | the paper |
+| `--rule` / `--hair` | `#2a2f39` | ruled lines between rows |
+| `--hair-strong` | cream at 55% | outlines on the live sky |
+| `--ink` / `--ink-2` / `--ink-3` | `#e9e4d6` / `#b6b1a3` / `#908b7d` | primary / secondary / labels (all ≥ 4.5:1 on paper) |
+| **`--station`** | `#ffc65c` | **the station**: its path, its lines in tables, and the link that finds it |
+| `--action` | = `--ink` | kept as an alias for the Sky tab's selected chips |
+| `--sky-day` … `--sky-astro` | four blues | sky darkness in the live sky |
 
 **Night mode** (`:root[data-mode='night']`) redefines every token as a dim red on black. Eyes need about 30 minutes to fully dark-adapt, and a second of bright light sets that back; red light disturbs it far less. It's offered automatically in the "get ready" and "look now" states.
 
-**Type.** System fonts (SF Pro on Apple, Roboto on Android, PingFang/Noto for Chinese): zero bytes, native feel. Times use tabular figures (`.tnum`) so they line up like a departure board. One very large time per screen (`clamp(4rem, 19vw, 6.5rem)`). The small uppercase `.label` style is used only for section names.
+**Type.** See §0: Instrument Serif and IBM Plex Mono (OFL, self-hosted, 51 KB), system sans for body text and Chinese. Times use tabular figures. One very large time per screen.
 
 ## 5. Components
 > **Retired 2026-11-02 (D-029):** `CompassCard`, `SkyDome`, `TonightStrip`, `WeekBoard` and `AlsoTonight` were replaced by The Night (§0). Their jobs now live in the scroll's stops, the time rail and the Sky tab's heading tape. The list below is kept as history.

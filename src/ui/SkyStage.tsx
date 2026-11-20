@@ -26,7 +26,6 @@ import { requestMotionPermission, useOrientation } from '../sky/useOrientation.t
 import { smoothBasis } from '../sky/orientation.ts'
 import { useCamera } from '../sky/useCamera.ts'
 import { HeadingTape } from './hud/HeadingTape.tsx'
-import { IconCamera } from './app/Icons.tsx'
 import { RECIPES, targetsFor, type Target } from '../photo/targets.ts'
 import { applyPreset, resetPreset, type Applied } from '../photo/cameraControl.ts'
 import { measureSync } from '../photo/sync.ts'
@@ -707,7 +706,7 @@ export function SkyStage({
           <div className="mx-auto mt-4 flex max-w-xl flex-col items-center px-5 text-center">
             <p
               aria-live="polite"
-              className={`display rounded-full px-4 py-2 text-[1.0625rem] backdrop-blur-md ${guide.aligned ? 'bg-action text-action-ink' : 'bg-black/45 text-white'}`}
+              className={`mono-caps px-4 py-2 text-[1.0625rem] ${guide.aligned ? 'bg-action text-action-ink' : 'bg-night/90 text-white'}`}
             >
               {guide.text}
             </p>
@@ -722,7 +721,7 @@ export function SkyStage({
                 />
               )}
               {cameraOn && synced && sync && (
-                <span className="display rounded-full bg-action/90 px-3 py-1 text-[0.75rem] text-action-ink">
+                <span className="mono-caps bg-action/90 px-3 py-1 text-[0.75rem] text-action-ink">
                   Synced to {sync.name}
                 </span>
               )}
@@ -730,7 +729,7 @@ export function SkyStage({
                 !synced &&
                 sensors.status === 'active' &&
                 camStatus === 'on' && (
-                  <span className="rounded-full bg-black/45 px-3 py-1 text-[0.75rem] text-white/75 backdrop-blur-md">
+                  <span className="bg-night/90 px-3 py-1 text-[0.75rem] text-white/75">
                     Aim at the Moon or a bright planet to sync
                   </span>
                 )}
@@ -741,13 +740,13 @@ export function SkyStage({
                     if (await requestMotionPermission()) sensors.restart()
                     else sensors.setStatus('denied')
                   }}
-                  className="pointer-events-auto display rounded-full bg-action px-4 py-1.5 text-[0.8125rem] text-action-ink"
+                  className="pointer-events-auto mono-caps bg-action px-4 py-1.5 text-[0.8125rem] text-action-ink"
                 >
                   Point with your phone
                 </button>
               )}
               {useDrag && (
-                <span className="rounded-full bg-black/45 px-3 py-1 text-[0.75rem] text-white/70 backdrop-blur-md">
+                <span className="bg-night/90 px-3 py-1 text-[0.75rem] text-white/70">
                   {sensors.status === 'denied'
                     ? 'Motion access is off. Drag to look around'
                     : touchDevice
@@ -756,12 +755,12 @@ export function SkyStage({
                 </span>
               )}
               {!useDrag && (
-                <span className="rounded-full bg-black/45 px-3 py-1 text-[0.75rem] text-white/75 backdrop-blur-md">
+                <span className="bg-night/90 px-3 py-1 text-[0.75rem] text-white/75">
                   Live · following your phone
                 </span>
               )}
               {hud.day && (
-                <span className="rounded-full bg-black/45 px-3 py-1 text-[0.75rem] text-white/75 backdrop-blur-md">
+                <span className="bg-night/90 px-3 py-1 text-[0.75rem] text-white/75">
                   Daytime: showing what’s behind the blue sky
                 </span>
               )}
@@ -778,15 +777,15 @@ export function SkyStage({
         {mode === 'camera' && (
           <>
             {recipe && (
-              <div className="w-full max-w-md rounded-2xl bg-black/50 px-4 py-2.5 text-sm ring-1 ring-white/10 backdrop-blur-md">
+              <div className="w-full max-w-md bg-night/90 px-4 py-2.5 text-sm border border-hair-strong">
                 <button
                   type="button"
                   aria-expanded={showRecipe}
                   onClick={() => setShowRecipe((v) => !v)}
                   className="flex w-full items-baseline justify-between gap-3 text-left"
                 >
-                  <span className="display text-[0.875rem] text-action">{recipe.title} tips</span>
-                  <span className="hud text-[13px] text-white/75">
+                  <span className="mono-caps text-[0.875rem] text-action">{recipe.title} tips</span>
+                  <span className="mono text-[13px] text-white/75">
                     {applied ? applied.label.split(' (')[0] : 'Auto'}
                   </span>
                   <span className="text-[0.75rem] font-semibold text-white/60">
@@ -818,9 +817,9 @@ export function SkyStage({
                   type="button"
                   aria-pressed={target?.id === t.id}
                   onClick={() => setTarget(t)}
-                  className={`shrink-0 rounded-2xl px-3.5 py-2 text-left ring-1 backdrop-blur-md ${target?.id === t.id ? 'bg-action text-action-ink ring-action' : 'bg-black/45 text-white ring-white/15'}`}
+                  className={`shrink-0 px-3.5 py-2 text-left border ${target?.id === t.id ? 'bg-action text-action-ink border-ink' : 'bg-night/90 text-white border-hair-strong'}`}
                 >
-                  <span className="display block text-[0.9375rem]">{t.name}</span>
+                  <span className="serif block text-[1.125rem] leading-tight">{t.name}</span>
                   <span
                     className={`block text-[0.6875rem] ${target?.id === t.id ? 'text-action-ink/75' : 'text-white/60'}`}
                   >
@@ -837,7 +836,7 @@ export function SkyStage({
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="w-24 rounded-full bg-black/45 px-3 py-2 text-center text-[0.75rem] font-semibold text-white ring-1 ring-white/15 backdrop-blur-md"
+                className="w-24 bg-night/90 px-3 py-2 text-center text-[0.75rem] font-semibold text-white border border-hair-strong"
               >
                 Phone camera
               </button>
@@ -915,9 +914,9 @@ export function SkyStage({
                   type="button"
                   aria-pressed={!pickedTarget}
                   onClick={() => setTarget(null)}
-                  className={`shrink-0 rounded-2xl px-3.5 py-2 text-left ring-1 backdrop-blur-md ${!pickedTarget ? 'bg-action text-action-ink ring-action' : 'bg-black/45 text-white ring-white/15'}`}
+                  className={`shrink-0 px-3.5 py-2 text-left border ${!pickedTarget ? 'bg-action text-action-ink border-ink' : 'bg-night/90 text-white border-hair-strong'}`}
                 >
-                  <span className="display block text-[0.9375rem]">
+                  <span className="serif block text-[1.125rem] leading-tight">
                     {stationName(focus.noradId).short}
                   </span>
                   <span
@@ -935,9 +934,9 @@ export function SkyStage({
                     type="button"
                     aria-pressed={pickedTarget?.id === t.id}
                     onClick={() => setTarget(t)}
-                    className={`shrink-0 rounded-2xl px-3.5 py-2 text-left ring-1 backdrop-blur-md ${pickedTarget?.id === t.id ? 'bg-action text-action-ink ring-action' : 'bg-black/45 text-white ring-white/15'}`}
+                    className={`shrink-0 px-3.5 py-2 text-left border ${pickedTarget?.id === t.id ? 'bg-action text-action-ink border-ink' : 'bg-night/90 text-white border-hair-strong'}`}
                   >
-                    <span className="display block text-[0.9375rem]">{t.name}</span>
+                    <span className="serif block text-[1.125rem] leading-tight">{t.name}</span>
                     <span
                       className={`block text-[0.6875rem] ${pickedTarget?.id === t.id ? 'text-action-ink/75' : 'text-white/60'}`}
                     >
@@ -951,9 +950,9 @@ export function SkyStage({
                 type="button"
                 aria-pressed={arOn}
                 onClick={() => setArOn((v) => !v)}
-                className={`display flex items-center gap-2 rounded-2xl px-4 py-3 text-[0.875rem] ring-1 backdrop-blur-md ${arOn ? 'bg-action text-action-ink ring-action' : 'bg-black/50 text-white ring-white/15'}`}
+                className={`mono-caps flex items-center gap-2 px-4 py-3 text-[0.875rem] border ${arOn ? 'bg-action text-action-ink border-ink' : 'bg-night/90 text-white border-hair-strong'}`}
               >
-                <IconCamera className="size-4.5" /> {arOn ? 'AR on' : 'AR camera'}
+                {arOn ? 'AR on' : 'AR camera'}
               </button>
               {focus && !pickedTarget && (
                 <button
@@ -970,7 +969,7 @@ export function SkyStage({
                       } else setSimMs(t)
                     }, 33)
                   }}
-                  className="display flex-1 rounded-2xl bg-black/50 px-4 py-3 text-[0.875rem] text-white ring-1 ring-white/15 backdrop-blur-md"
+                  className="mono-caps flex-1 bg-night/90 px-4 py-3 text-[0.875rem] text-white border border-hair-strong"
                 >
                   {simMs === null
                     ? 'Preview the pass'
@@ -1026,9 +1025,7 @@ function SkyCheckChip({
           : check.reason
   return (
     <div className="flex max-w-xs flex-col items-center gap-1">
-      <span
-        className={`display flex items-center gap-1.5 rounded-full px-3 py-1 text-[0.75rem] ${style.cls}`}
-      >
+      <span className={`mono-caps flex items-center gap-1.5 px-3 py-1 text-[0.75rem] ${style.cls}`}>
         <CloudGlyph condition={c} />
         {style.label}
       </span>

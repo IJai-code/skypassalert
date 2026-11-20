@@ -40,7 +40,7 @@ export function HeadingTape({
               <div className={`mx-auto w-px ${l ? 'h-3 bg-white/80' : 'h-1.5 bg-white/45'}`} />
               {l && (
                 <div
-                  className={`hud mt-0.5 text-center text-[11px] ${/[A-Z]/.test(l) ? 'font-bold text-white' : 'text-white/70'} ${l === 'N' ? 'text-station' : ''}`}
+                  className={`mono mt-0.5 text-center text-[11px] ${/[A-Z]/.test(l) ? 'font-bold text-white' : 'text-white/70'} ${l === 'N' ? 'text-station' : ''}`}
                 >
                   {l}
                 </div>
@@ -59,13 +59,13 @@ export function HeadingTape({
       <div className="absolute top-0 left-1/2 flex -translate-x-1/2 flex-col items-center">
         <div className="h-3 w-0.5 bg-station" />
       </div>
-      <div className="hud absolute top-7 left-1/2 -translate-x-1/2 rounded-sm bg-black/55 px-1.5 text-[13px] font-semibold text-white">
+      <div className="mono absolute top-7 left-1/2 -translate-x-1/2 rounded-sm bg-black/55 px-1.5 text-[13px] font-semibold text-white">
         {String(Math.round(norm(headingDeg))).padStart(3, '0')}° {compass16(norm(headingDeg))}
         <span className="ml-2 font-medium text-white/60">ALT {Math.round(elDeg)}°</span>
       </div>
       {rel !== null && Math.abs(rel) >= SPAN / 2 && (
         <div
-          className={`hud absolute top-1 text-[11px] font-semibold text-station ${rel > 0 ? 'right-1' : 'left-1'}`}
+          className={`mono absolute top-1 text-[11px] font-semibold text-station ${rel > 0 ? 'right-1' : 'left-1'}`}
         >
           {rel > 0 ? `${Math.round(rel)}° ›` : `‹ ${Math.round(-rel)}°`}
         </div>

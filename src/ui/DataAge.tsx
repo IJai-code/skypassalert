@@ -13,11 +13,9 @@ export function DataAge({ epochMs, nowMs }: { epochMs: number; nowMs: number }) 
         ? 'Times may be off by up to a minute; we refresh every 6 hours.'
         : 'This data is old. Times could be off by several minutes.'
   return (
-    <p className="text-sm text-ink-3">
-      <span
-        aria-hidden="true"
-        className={`mr-2 inline-block size-1.5 rounded-full align-middle ${days < 1.5 ? 'bg-ink-2' : 'bg-ink-3 ring-1 ring-ink-2'}`}
-      />
+    <p
+      className={`mono text-[0.75rem] leading-relaxed ${days < 1.5 ? 'text-ink-3' : 'text-ink-2'}`}
+    >
       Orbit data from {ago(age)}. {note}
     </p>
   )

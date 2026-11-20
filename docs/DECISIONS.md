@@ -217,3 +217,17 @@ Node 22.18+ strips TypeScript types natively. Labs (`scripts/labs/*.ts`) import 
   - Checked against Skyfield `wgs84.subpoint_of` in CI: max 14 m.
 - **Claims:** per MARKET.md rules, public copy will not say "only" or "first"; we describe what it does.
 - **Learn:** `docs/learn/14-wave-back.md`.
+
+## D-031 The Almanac: the whole app set like a printed star almanac (2026-11-03)
+- **Context:** Ishaan said The Night (D-029) "still seems standard AI". At 375 px it used the stock dark-app kit: glass pill header, cyan pill buttons with icons, a heavy grotesk time with a small "PM", tracked-caps eyebrows with coloured dots, and a floating rounded tab bar. It also had real flaws: the lower half of the screen was empty, compass labels overlapped text, and the rail carried little information.
+- **How we chose:** three mockups using tonight's real Fremont events (A Almanac, B Instrument, C Poster). Ishaan picked A.
+- **Choice:**
+  - **Type:** Instrument Serif for times and headlines (a 9rem time, an italic "pm", the path sentence in italic) and IBM Plex Mono for figures, tables and labels. Body copy stays in the system face (zero bytes, Chinese fallback). Archivo is removed.
+  - **Colour:** cream ink (`#e9e4d6`) on blue-black paper (`#0d1118`), hairline rules. Amber means the station and the one link that finds it. Cyan is retired.
+  - **Actions are words:** underlined text links. No pills, glass, blur, shadows or icons; square corners.
+  - **Tonight:** a running head (place, coordinates, date); the answer; the pass as a star-atlas chart (`PassChart`, SVG from the real track, dashed where it fades into shadow) beside the directions; then the night as a ruled table whose lines open in place; then the next good evenings.
+  - **Retired:** the pinned scrolling sky and rail (`scrollSky.ts`), canvas thumbnails (`SkyThumb`), the icon set and the NASA photos (no longer shown anywhere).
+  - **Week:** italic day headings, ruled rows with a 44 px chart glyph per pass. **Wave Back:** an engraved globe (cream coastlines, no glow) between a ruled header and footer. **Sky tab:** square, solid controls with mono labels; the sky drawing is unchanged.
+- **Why the scrolling sky went:** it was the most "app-like" part, it put text over drawings, and the full-screen sky already lives in the Sky tab. A small exact chart answers "where do I look" faster.
+- **Cost:** 51 KB of fonts (one 15 KB face preloaded), no extra JS.
+
