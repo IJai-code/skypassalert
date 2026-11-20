@@ -98,8 +98,9 @@ export function AlmanacPage(props: Props) {
       highlight: thing
         ? { dir: enu(thing.azDeg, thing.elDeg), refMs: thing.atMs, label: thing.label }
         : null,
+      live: forecast.live,
     }
-  }, [hero, heroIsTonight, night, other, minute])
+  }, [hero, heroIsTonight, night, other, minute, forecast.live])
   const sunsetAz = (p: ForecastPass) =>
     forecast.nights.find(
       (n) => n.evening.sunsetMs !== null && Math.abs(p.start.unixMs - n.evening.sunsetMs) < 36e6,
@@ -401,7 +402,9 @@ function nightTitle(startMs: number, nowMs: number, tz: string): string {
 export function BigTime({ ms, tz, stage }: { ms: number; tz: string; stage?: boolean }) {
   const { clock, period } = timeParts(ms, tz)
   // On the Flight's stage the time shares the ground with the sentence.
-  const size = stage ? 'text-[clamp(4.25rem,22vw,8rem)]' : 'text-[clamp(6rem,35vw,9rem)]'
+  const size = stage
+    ? 'flight-time text-[clamp(4.25rem,22vw,8rem)]'
+    : 'text-[clamp(6rem,35vw,9rem)]'
   return (
     <p className={`serif tnum mt-2 -ml-1 ${size} leading-[0.82] tracking-[-0.02em]`}>
       <span>{clock}</span>

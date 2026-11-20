@@ -22,7 +22,7 @@ import {
   horizonFrac,
   horizonPitchDeg,
   liftCamera,
-  orbitCamera,
+  openingCamera,
   projectDir,
   projectPoint,
   smoothedYaw,
@@ -32,8 +32,17 @@ import {
   type Screen,
 } from './camera.ts'
 import { at, duskTimeline, passTimeline, progressForClock } from './timeline.ts'
-import { coastBuffer, frameAt, labelsAt, makeFilm, skySpin, spinDir } from './film.ts'
-import { len, sub, slerp, type V3 } from './vec.ts'
+import {
+  coastBuffer,
+  frameAt,
+  labelsAt,
+  makeFilm,
+  skySpin,
+  spinDir,
+  stationAlongTrack,
+} from './film.ts'
+import { lightStyle, toPixel } from './textures.ts'
+import { len, sub, slerp, unit, type V3 } from './vec.ts'
 
 const f = forecast({
   place: FREMONT,
@@ -45,6 +54,7 @@ const f = forecast({
 const pass = [...f.passes].sort((a, b) => passScore(b) - passScore(a))[0]!
 const world = makeWorld(FREMONT)
 const phone: Screen = { width: 390, height: 844 }
+const stationAlongTrackForTest = (t: number) => stationAlongTrack(pass.track, t)
 const rig: GroundRig = {
   track: pass.track,
   yaw: smoothedYaw(pass.track),
@@ -129,23 +139,15 @@ describe('the camera', () => {
     expect(inFrame.length / pass.track.length).toBeGreaterThan(0.5)
   })
 
-  it('flies from the yard to orbit without a jump', () => {
-    const endSample = sampleAt(pass.station.samples, pass.end.unixMs)
-    const ground = groundCamera(rig, pass.end.unixMs, phone, 1)
-    const station = stationFromOrbit(world, endSample)
-    const orbit = orbitCamera(world, station, rig.az0)
-    let prev = liftCamera(world, ground, orbit, 0, station)
+  it('dives from the opening shot to the yard without a jump, eyes on the horizon midway', () => {
+    const ground = groundCamera(rig, pass.start.unixMs, phone, 0)
+    const opening = openingCamera(world, rig.az0, phone)
+    const station = stationAlongTrackForTest(pass.start.unixMs)
+    let prev = liftCamera(world, ground, opening, 0, station)
     expect(prev).toBe(ground)
     for (let i = 1; i <= 400; i++) {
-      const c = liftCamera(world, ground, orbit, i / 400, station)
-      // On the climb, the station stays in the frame (until the last turn down).
-      if (i / 400 < 0.7) {
-        const sp = projectPoint(c, phone, station)
-        expect(sp).not.toBeNull()
-        expect(sp!.y).toBeGreaterThan(-phone.height * 0.1)
-        expect(sp!.y).toBeLessThan(phone.height * 1.1)
-      }
-      // Each step turns the view by under 1.5° and moves the eye by under 3%
+      const c = liftCamera(world, ground, opening, i / 400, station)
+      // Each step turns the view by under 1.5° and moves the eye by under 5%
       // of its height (or 200 m near the ground).
       const turn = Math.acos(
         Math.min(
@@ -162,26 +164,35 @@ describe('the camera', () => {
       )
       prev = c
     }
-    expect(prev).toBe(orbit)
+    expect(prev).toBe(opening)
+    // A third of the way down from orbit, the camera looks out at the horizon
+    // (not up into black sky, not straight down).
+    const mid = liftCamera(world, ground, opening, 0.25, station)
+    const local = unit(sub(mid.eye, world.centre))
+    const tilt =
+      (Math.asin(
+        mid.forward[0] * local[0] + mid.forward[1] * local[1] + mid.forward[2] * local[2],
+      ) *
+        180) /
+      Math.PI
+    expect(Math.abs(tilt)).toBeLessThan(25)
   })
 
-  it('from orbit, shows you below the station with Earth’s edge near the top', () => {
-    const endSample = sampleAt(pass.station.samples, pass.end.unixMs)
-    const station = stationFromOrbit(world, endSample)
-    const cam = orbitCamera(world, station, rig.az0)
-    const you = projectPoint(cam, phone, [0, 0, 0])!
-    const it = projectPoint(cam, phone, station)!
-    expect(you.y).toBeGreaterThan(it.y)
-    for (const p of [you, it]) {
-      expect(p.x).toBeGreaterThan(0)
-      expect(p.x).toBeLessThan(phone.width)
-      expect(p.y).toBeGreaterThan(0)
-      expect(p.y).toBeLessThan(phone.height)
+  it('opening shot: Earth’s glowing edge across the middle, you below it, space above', () => {
+    for (const screen of [phone, { width: 1280, height: 800 }]) {
+      const cam = openingCamera(world, 250, screen)
+      // Straight up the middle of the screen: space at the top, Earth at the bottom.
+      const at = (fy: number) => {
+        const t = Math.atan((1 - 2 * fy) * Math.tan((cam.vfovDeg / 2) * (Math.PI / 180)))
+        return slerp(cam.forward, cam.up, (t * 180) / Math.PI / 90)
+      }
+      expect(hitEarth(world, cam.eye, cam.eyeAlt, at(0.3))).toBeNull()
+      expect(hitEarth(world, cam.eye, cam.eyeAlt, at(0.55))).not.toBeNull()
+      const you = projectPoint(cam, screen, [0, 0, 0])!
+      expect(you.y / screen.height).toBeGreaterThan(0.5)
+      expect(you.y / screen.height).toBeLessThan(0.9)
+      expect(you.x / screen.width).toBeCloseTo(0.5, 1)
     }
-    // The top-centre ray misses Earth (space above the limb); the centre hits it.
-    const top = slerp(cam.forward, cam.up, (cam.vfovDeg / 2 - 1) / 90)
-    expect(hitEarth(world, cam.eye, cam.eyeAlt, top)).toBeNull()
-    expect(hitEarth(world, cam.eye, cam.eyeAlt, cam.forward)).not.toBeNull()
   })
 })
 
@@ -199,25 +210,28 @@ describe('scroll is the clock', () => {
     }
   })
 
-  it('walks through the beats in order', () => {
-    expect(at(tl, 0).beat).toBe('tonight')
-    expect(at(tl, 0.3).beat).toBe('pass')
-    expect(at(tl, 0.7).beat).toBe('lift')
+  it('walks through the beats in order: orbit, dive, pass, settle', () => {
+    expect(at(tl, 0).beat).toBe('orbit')
+    expect(at(tl, 0.25).beat).toBe('dive')
+    expect(at(tl, 0.6).beat).toBe('pass')
     expect(at(tl, 0.95).beat).toBe('settle')
-    expect(at(tl, -1).beat).toBe('tonight')
+    expect(at(tl, -1).beat).toBe('orbit')
     expect(at(tl, 2).beat).toBe('settle')
   })
 
-  it('stays on the ground until the lift, then reaches orbit', () => {
-    expect(at(tl, 0.5).lift).toBe(0)
-    expect(at(tl, 0.68).lift).toBeGreaterThan(0.2)
-    expect(at(tl, 0.68).lift).toBeLessThan(0.8)
-    expect(at(tl, 0.9).lift).toBe(1)
+  it('opens in orbit, dives to the yard, and stays there for the pass', () => {
+    expect(at(tl, 0).lift).toBe(1)
+    expect(at(tl, 0.1).lift).toBe(1)
+    expect(at(tl, 0.26).lift).toBeGreaterThan(0.2)
+    expect(at(tl, 0.26).lift).toBeLessThan(0.8)
+    expect(at(tl, 0.45).lift).toBe(0)
+    expect(at(tl, 1).lift).toBe(0)
   })
 
-  it('docks the big time once you start scrolling', () => {
+  it('keeps the big answer up until the dive starts', () => {
     expect(at(tl, 0).dock).toBe(0)
-    expect(at(tl, 0.1).dock).toBe(1)
+    expect(at(tl, 0.05).dock).toBe(0)
+    expect(at(tl, 0.2).dock).toBe(1)
   })
 
   it('opens at "now" if the station is already up', () => {
@@ -231,18 +245,18 @@ describe('scroll is the clock', () => {
   })
 
   it('reduced motion: cuts instead of flying, and the camera holds still', () => {
-    expect(at(tl, 0.6, true).lift).toBe(0)
-    expect(at(tl, 0.7, true).lift).toBe(1)
-    expect(at(tl, 0.3, true).follow).toBe(false)
-    expect(at(tl, 0.01, true).dock).toBe(0)
-    expect(at(tl, 0.06, true).dock).toBe(1)
+    expect(at(tl, 0.2, true).lift).toBe(1)
+    expect(at(tl, 0.3, true).lift).toBe(0)
+    expect(at(tl, 0.6, true).follow).toBe(false)
+    expect(at(tl, 0.1, true).dock).toBe(0)
+    expect(at(tl, 0.13, true).dock).toBe(1)
   })
 
-  it('a night with no pass is two beats: dusk into dark, no flight', () => {
+  it('a night with no pass: orbit, dive, then dusk into dark', () => {
     const d = duskTimeline(1_000_000, 4_600_000)
-    expect(d.spans.map((s) => s.beat)).toEqual(['tonight', 'dusk', 'settle'])
-    expect(at(d, 0.5).beat).toBe('dusk')
-    expect(at(d, 0.5).lift).toBe(0)
+    expect(d.spans.map((s) => s.beat)).toEqual(['orbit', 'dive', 'dusk', 'settle'])
+    expect(at(d, 0.6).beat).toBe('dusk')
+    expect(at(d, 0.6).lift).toBe(0)
     expect(at(d, 1).clockMs).toBe(4_600_000)
   })
 })
@@ -266,7 +280,7 @@ describe('film frames', () => {
   })
 
   it('shows the station in your sky during the pass, sunlit', () => {
-    const f = frameAt(film, 0.3, phone, false)
+    const f = frameAt(film, 0.55, phone, false)
     expect(f.at.beat).toBe('pass')
     expect(f.space).toBe(0)
     expect(f.station!.sunlit).toBeGreaterThan(0.5)
@@ -275,18 +289,22 @@ describe('film frames', () => {
     expect(p.x).toBeLessThan(phone.width)
   })
 
-  it('from orbit: above the air, with you, the station and the line between you', () => {
-    const f = frameAt(film, 1, phone, false)
+  it('opens from orbit: above the air, with you, the station and the line between you', () => {
+    const f = frameAt(film, 0, phone, false)
     expect(f.space).toBe(1)
     expect(f.lineOfSight).not.toBeNull()
-    const labels = labelsAt(film, f, phone, { formatMinute: () => '7:33', stationShort: 'ISS' })
-    expect(labels.map((l) => l.text)).toEqual(expect.arrayContaining(['You', 'ISS']))
+    const labels = labelsAt(film, f, phone, {
+      formatMinute: () => '7:33',
+      stationShort: 'ISS',
+      placeShort: 'Fremont',
+    })
+    expect(labels.map((l) => l.text)).toContain('You · Fremont')
     // No compass letters or minute times up there.
     expect(labels.some((l) => l.kind === 'compass' || l.kind === 'minute')).toBe(false)
   })
 
   it('labels the ground view: compass points and the minutes along the path', () => {
-    const f = frameAt(film, 0.3, phone, false)
+    const f = frameAt(film, 0.55, phone, false)
     const labels = labelsAt(film, f, phone, { formatMinute: () => 'm', stationShort: 'ISS' })
     expect(labels.some((l) => l.kind === 'compass')).toBe(true)
     expect(labels.some((l) => l.kind === 'minute')).toBe(true)
@@ -308,13 +326,34 @@ describe('film frames', () => {
       toMs: pass.start.unixMs + 3 * 3_600_000,
       faceAz: 180,
       highlight: { dir: enu(180, 55), refMs: pass.start.unixMs, label: 'Saturn' },
+      live: f.live,
       catalog: null,
     })
     expect(dusk.trail).toBeNull()
-    const start = frameAt(dusk, 0, phone, false)
-    const later = frameAt(dusk, 0.5, phone, false)
+    expect(dusk.orbits.starts).toHaveLength(2) // both stations' live orbits
+    const start = frameAt(dusk, 0.37, phone, false)
+    const later = frameAt(dusk, 0.6, phone, false)
     expect(later.cam.forward[2]).toBeGreaterThan(start.cam.forward[2])
     const ring = labelsAt(dusk, later, phone, { formatMinute: () => '', stationShort: '' })
     expect(ring.some((l) => l.text === 'Saturn')).toBe(true)
+  })
+})
+
+describe('globe textures', () => {
+  it('maps longitude and latitude onto the equirectangular texture', () => {
+    expect(toPixel(-180, 90)).toEqual({ x: 0, y: 0 })
+    expect(toPixel(0, 0)).toEqual({ x: 1024, y: 512 })
+    expect(toPixel(180, -90)).toEqual({ x: 2048, y: 1024 })
+  })
+
+  it('makes bigger cities brighter and wider, within bounds', () => {
+    let prev = { radius: 0, alpha: 0 }
+    for (let level = 1; level <= 9; level++) {
+      const s = lightStyle(level)
+      expect(s.radius).toBeGreaterThan(prev.radius)
+      expect(s.alpha).toBeGreaterThanOrEqual(prev.alpha)
+      expect(s.alpha).toBeLessThanOrEqual(1)
+      prev = s
+    }
   })
 })

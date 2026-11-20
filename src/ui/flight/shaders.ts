@@ -64,14 +64,46 @@ uniform vec3 u_horizon;
 uniform float u_glow;    // afterglow strength towards the Sun
 uniform float u_space;   // 0 on the ground, 1 above the air
 uniform vec3 u_paper;    // the page's paper colour (the ground you stand on)
+uniform mat3 u_toEcef;   // your frame → Earth-fixed, to look up the textures
+uniform sampler2D u_surface; // land and sea colours
+uniform sampler2D u_night;   // r: city lights, g: sea mask
+uniform float u_textured;    // 0 until the textures are painted
+uniform float u_fade;        // 0 → 1 as the film first appears
 in vec2 v_ndc;
 out vec4 o;
 
-const vec3 NIGHT_SIDE = vec3(0.055, 0.071, 0.11);
-const vec3 DAY_SIDE = vec3(0.16, 0.21, 0.30);
-const vec3 TWILIGHT = vec3(0.55, 0.32, 0.20);
-const vec3 AIR = vec3(0.45, 0.62, 0.95);
+const float PI = 3.14159265;
+const vec3 NIGHT_SIDE = vec3(0.025, 0.035, 0.06);
+const vec3 TWILIGHT = vec3(0.9, 0.45, 0.2);
+const vec3 AIR = vec3(0.35, 0.6, 1.0);
 const vec3 GLOW = vec3(1.0, 0.67, 0.43);
+const vec3 CITY = vec3(1.0, 0.72, 0.4);
+const vec3 SUN = vec3(1.0, 0.96, 0.88);
+
+vec3 globe(vec3 n, vec3 rd) {
+  float l = dot(n, u_sun);
+  vec3 e = u_toEcef * n;
+  vec2 uv = vec2(atan(e.y, e.x) / (2.0 * PI) + 0.5, 0.5 - asin(clamp(e.z, -1.0, 1.0)) / PI);
+  vec3 albedo = mix(vec3(0.1, 0.16, 0.24), texture(u_surface, uv).rgb, u_textured);
+  vec2 night = texture(u_night, uv).rg * u_textured;
+  // Daylight with a soft edge; the band of dusk across the terminator.
+  float day = smoothstep(-0.06, 0.35, l);
+  vec3 col = mix(NIGHT_SIDE, albedo * (0.25 + 1.05 * max(l, 0.0)), day);
+  col += TWILIGHT * smoothstep(-0.14, 0.0, l) * (1.0 - smoothstep(0.0, 0.1, l)) * 0.16;
+  // Sunlight glinting off the sea.
+  vec3 h = normalize(u_sun - rd);
+  col += SUN * pow(max(dot(n, h), 0.0), 80.0) * night.g * step(0.0, l) * 0.9;
+  // City lights, only where it's night. Close up, the texture runs out of
+  // detail; raising it to a power narrows each soft blob back to a point.
+  float close = 1.0 - smoothstep(400.0, 3500.0, u_eyeAlt);
+  float lights = pow(night.r, 1.0 + 2.5 * close);
+  col += CITY * lights * (1.0 - smoothstep(-0.12, 0.04, l)) * 1.25;
+  // The air seen edge-on: a rim of blue on the day side, warm at the terminator.
+  float rim = pow(1.0 - max(dot(n, -rd), 0.0), 2.5);
+  float litRim = smoothstep(-0.25, 0.35, l);
+  col += mix(TWILIGHT, AIR, smoothstep(0.0, 0.4, l)) * rim * litRim * 0.75;
+  return col;
+}
 
 void main() {
   vec3 rd = normalize(u_fwd + v_ndc.x * u_tan.x * u_right + v_ndc.y * u_tan.y * u_up);
@@ -85,15 +117,9 @@ void main() {
   vec3 col;
 
   if (t > 0.0) {
-    // Earth. From orbit: night side, day side and the band of twilight
-    // between, from the angle between the ground's normal and the Sun.
     vec3 n = normalize(oc + rd * t);
-    float l = dot(n, u_sun);
-    float day = smoothstep(-0.05, 0.3, l);
-    float dusk = smoothstep(-0.2, 0.0, l) * (1.0 - smoothstep(0.0, 0.2, l));
-    vec3 globe = mix(NIGHT_SIDE, DAY_SIDE, day) + TWILIGHT * dusk * 0.28;
     // Standing in the yard, the ground is the page itself.
-    col = mix(u_paper, globe, u_space);
+    col = mix(u_paper, globe(n, rd), u_space);
   } else {
     // Sky: horizon colour low down, zenith colour overhead, a warm glow
     // above where the Sun is (even when it has set).
@@ -103,12 +129,16 @@ void main() {
     float toward = max(dot(normalize(sh + 1e-6), normalize(rh + 1e-6)), 0.0);
     sky += GLOW * u_glow * 0.35 * pow(toward, 5.0) * exp(-max(e, 0.0) * 7.0);
 
-    // From space: black, with the thin shell of air lit where the Sun hits it.
+    // From space: black, with the shell of air glowing where the Sun lights it.
     float closest = sqrt(max(dot(oc, oc) - b * b, 0.0)) - u_R;
     vec3 limbN = normalize(oc - rd * b);
-    float air = exp(-max(closest, 0.0) / 45.0) * step(b, 0.0);
-    float lit = smoothstep(-0.12, 0.25, dot(limbN, u_sun));
-    vec3 space = AIR * air * lit * 0.55;
+    float air = exp(-max(closest, 0.0) / 60.0) * step(b, 0.0);
+    float lit = smoothstep(-0.2, 0.3, dot(limbN, u_sun));
+    vec3 tint = mix(TWILIGHT, AIR, smoothstep(-0.05, 0.3, dot(limbN, u_sun)));
+    vec3 space = tint * air * lit * 1.1;
+    // The Sun itself (0.53° across), bright enough to bloom.
+    float sd = dot(rd, u_sun);
+    space += SUN * (smoothstep(0.99996, 0.99999, sd) * 3.0 + pow(max(sd, 0.0), 900.0) * 0.6);
     col = mix(sky, space, u_space);
   }
 
@@ -117,9 +147,9 @@ void main() {
   // the familiar dip √(2h/R), from orbit it is Earth's curved edge.
   float d = e + sqrt(c) / length(oc);
   float line = 1.0 - smoothstep(0.0, 1.5 * fwidth(d), abs(d));
-  col = mix(col, vec3(0.66, 0.70, 0.80), line * mix(0.35, 0.6, u_space));
+  col = mix(col, vec3(0.66, 0.70, 0.80), line * 0.35 * (1.0 - u_space));
 
-  o = vec4(night(col), 1.0);
+  o = vec4(night(col) * u_fade, 1.0);
 }
 `
 
@@ -278,5 +308,50 @@ void main() {
   float ring = smoothstep(0.62, 0.74, r) * (1.0 - smoothstep(0.86, 1.0, r));
   float a = v_col.a * mix(disc, ring, v_ring);
   o = vec4(night(v_col.rgb) * a, a);
+}
+`
+
+/** Bloom, step 1: keep only what's brighter than the threshold, at half size. */
+export const BRIGHT_FS = /* glsl */ `#version 300 es
+precision mediump float;
+uniform sampler2D u_src;
+uniform float u_threshold;
+in vec2 v_ndc;
+out vec4 o;
+void main() {
+  vec3 c = texture(u_src, v_ndc * 0.5 + 0.5).rgb;
+  float l = max(c.r, max(c.g, c.b));
+  o = vec4(c * smoothstep(u_threshold, 1.0, l), 1.0);
+}
+`
+
+/** Bloom, step 2: a 9-tap Gaussian blur along one axis (run across, then down). */
+export const BLUR_FS = /* glsl */ `#version 300 es
+precision mediump float;
+uniform sampler2D u_src;
+uniform vec2 u_step; // one texel along the blur direction
+in vec2 v_ndc;
+out vec4 o;
+void main() {
+  vec2 uv = v_ndc * 0.5 + 0.5;
+  vec3 c = texture(u_src, uv).rgb * 0.227;
+  c += (texture(u_src, uv + u_step * 1.385).rgb + texture(u_src, uv - u_step * 1.385).rgb) * 0.316;
+  c += (texture(u_src, uv + u_step * 3.231).rgb + texture(u_src, uv - u_step * 3.231).rgb) * 0.070;
+  o = vec4(c, 1.0);
+}
+`
+
+/** Bloom, step 3: the picture plus its glow. */
+export const COMPOSITE_FS = /* glsl */ `#version 300 es
+precision mediump float;
+uniform sampler2D u_scene;
+uniform sampler2D u_bloom;
+uniform float u_strength;
+in vec2 v_ndc;
+out vec4 o;
+void main() {
+  vec2 uv = v_ndc * 0.5 + 0.5;
+  vec3 c = texture(u_scene, uv).rgb + texture(u_bloom, uv).rgb * u_strength;
+  o = vec4(c, 1.0);
 }
 `

@@ -1,6 +1,6 @@
 # Status
 
-_Last updated: 2026-11-19, Phase 3c (The Flight) in review, stacked on Phase 3a (PR #12) and Phase 2.9 (PR #11)._
+_Last updated: 2026-11-19, Phase 3c+ (the Flight opens in orbit) in review. Phases 2.9, 3a and 3c are merged and live._
 
 ## Done
 ### Phase 1: Foundation (merged)
@@ -94,13 +94,13 @@ Public repo, CI, the Pages deploy at https://skypassalert.com (HTTPS enforced, w
 - **Numbers:** 242 tests; initial JS 105.7 KB (budget 150); Wave Back is a 6.4 KB lazy chunk plus 17 KB of Earth data on first flip; Lighthouse 98 / 100 / 100 / 100.
 - **Needs a real phone:** scroll feel, the share sheet (iOS / Android / WeChat), and night mode outdoors.
 
-### Phase 2.9: The Almanac (2026-11-03, PR in review)
+### Phase 2.9: The Almanac (2026-11-03, merged and live 2026-11-19)
 - **Look:** the whole app is set like a printed star almanac: serif times, mono figures, cream on blue-black, hairline rules, text links (D-031). Chosen by Ishaan from three mockups.
 - **Tonight:** running head, the answer, a star-atlas chart of the pass beside the directions, the night as a ruled table that opens line by line, and the next good evenings.
 - **Week, Wave Back, Sky tab, sheets:** restyled to match. The scrolling sky, rail, thumbnails, icons and photos are retired.
 - **Needs a real phone:** legibility of the italic outdoors, red mode, and the wave card share.
 
-### Phase 3a: Family night (2026-11-06, PR in review; D-032)
+### Phase 3a: Family night (2026-11-06, merged and live 2026-11-19; D-032)
 - **Bedtime** (default 9:30 pm, on the device): passes after it are listed and marked, never headlined. A clearly better late pass gets a footnote.
 - **Simple words:** a kid register of every pass sentence, with the same facts.
 - **Meteor showers:** 12 IMO major showers, keyed by solar longitude. Tonight's best shower is a table line with an honest rate range, where to look, and the Moon's effect. Learn chapter 15.
@@ -111,7 +111,7 @@ Public repo, CI, the Pages deploy at https://skypassalert.com (HTTPS enforced, w
 - **Wording fix:** passes that end because dawn brightens the sky no longer say "sets".
 - **Numbers:** 273 tests; initial JS 106.7 KB (budget 150); forecast 15 days in ~0.2 s; Lighthouse 97 / 100 / 100 / 100 on `/`, 100 ×4 on `/privacy/` and `/about/`.
 
-### Phase 3c: The Flight (2026-11-19, PR in review; D-033)
+### Phase 3c: The Flight (2026-11-19, merged and live; D-033)
 - **The top of Tonight is a 3D film you scroll**, after two reference reels Ishaan sent. Scroll is the clock:
   - stand in your yard facing where the pass begins;
   - play the real pass across the real sky;
@@ -124,6 +124,12 @@ Public repo, CI, the Pages deploy at https://skypassalert.com (HTTPS enforced, w
 - **Learn chapter 16** (one world in km, scroll as clock, the exponential climb, the float32 trap in ray–sphere tests).
 - **Numbers:** 300 tests; initial JS 113.8 KB (budget 150); Flight chunk 8.3 KB (own budget 40).
 - **Needs a real phone:** scroll feel and frame rate on an iPhone and a mid-range Android, the rail with a thumb, and red light outdoors.
+
+### Phase 3c+: The Flight opens in orbit (2026-11-19, PR in review; D-034)
+- Ishaan judged 3c "virtually no change" against the reels. Now the **first frame** is Earth from orbit: a globe painted from our own coastline and city data, city lights, the Sun and the air's glowing edge with bloom, the stations on their real orbits, your town marked, and the answer in big type above. Scroll dives down into your sky, then the pass plays.
+- Software-rendered WebGL (and so headless Lighthouse) gets the 2D picture.
+- **Numbers:** 303 tests; initial JS 114.0 KB (budget 150); Flight chunk 11.4 KB (own budget 40); `lights.json` 31 KB gzipped.
+- **Needs a real phone:** frame rate of the opening shot and the dive on an iPhone and a mid-range Android.
 
 ## Next: Phase 3b (MVP v0.1, continued)
 - zh-Hans: move all copy into a catalog, then translate, marked needs-native-review.

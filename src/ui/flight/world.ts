@@ -24,6 +24,8 @@ export type World = {
   fromEcef(p: Readonly<V3>): V3
   /** Earth-fixed direction → this frame (no shift). */
   dirFromEcef(d: Readonly<V3>): V3
+  /** This frame → Earth-fixed directions, as a column-major 3×3 (for the GPU's texture lookup). */
+  toEcef: Float32Array
 }
 
 /**
@@ -44,6 +46,8 @@ export function makeWorld(place: Place): World {
     centre: [0, 0, -R],
     fromEcef: (p) => dirFromEcef(sub(p, origin)),
     dirFromEcef,
+    // The inverse of a rotation is its transpose: columns e, n, u.
+    toEcef: new Float32Array([...e, ...n, ...u]),
   }
 }
 

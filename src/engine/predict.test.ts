@@ -29,6 +29,21 @@ describe('forecast()', () => {
     }
   })
 
+  it('includes each station’s live orbit: a little over one revolution from now', () => {
+    expect(f.live.map((l) => l.noradId).sort()).toEqual([25544, 48274])
+    for (const l of f.live) {
+      expect(l.samples[0]!.unixMs).toBe(f.fromMs - 10 * 60_000)
+      expect(l.samples.at(-1)!.unixMs).toBe(f.fromMs + 100 * 60_000)
+      for (const s of l.samples) {
+        expect(s.heightKm).toBeGreaterThan(330)
+        expect(s.heightKm).toBeLessThan(460)
+      }
+      // Over ~110 minutes a low orbit goes through Earth's shadow at least once.
+      expect(l.samples.some((s) => s.sunlit < 0.5)).toBe(true)
+      expect(l.samples.some((s) => s.sunlit > 0.5)).toBe(true)
+    }
+  })
+
   it('computes one evening per day with a plausible Fremont sunset', () => {
     expect(f.nights).toHaveLength(7)
     const first = f.nights[0]!.evening

@@ -5,6 +5,7 @@ export {
   type Forecast,
   type ForecastPass,
   type ForecastRequest,
+  type LiveOrbit,
   type NightSky,
 } from './predict.ts'
 export type { Place } from './place.ts'

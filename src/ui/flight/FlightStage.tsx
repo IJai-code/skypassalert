@@ -6,7 +6,7 @@
 // loads on your first touch and takes over the picture when it's ready.
 // Docs: docs/DESIGN.md#flight · Learn: docs/learn/16-the-flight.md
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import type { ForecastPass } from '../../engine/index.ts'
+import type { ForecastPass, LiveOrbit } from '../../engine/index.ts'
 import type { Place } from '../../engine/place.ts'
 import { skyScene, type SkyScene } from '../../engine/sky/scene.ts'
 import { subsolarPoint, sunElevationAt } from '../../engine/sky/subpoint.ts'
@@ -32,7 +32,14 @@ const Flight = lazy(() => import('./Flight.tsx'))
 
 export type StageInput =
   | { kind: 'pass'; pass: ForecastPass }
-  | { kind: 'dusk'; fromMs: number; toMs: number; faceAz: number; highlight: Highlight | null }
+  | {
+      kind: 'dusk'
+      fromMs: number
+      toMs: number
+      faceAz: number
+      highlight: Highlight | null
+      live: readonly LiveOrbit[]
+    }
 
 type Props = {
   place: Place
@@ -119,6 +126,7 @@ export function FlightStage(props: Props) {
             toMs: input.toMs,
             faceAz: input.faceAz,
             highlight: input.highlight,
+            live: input.live,
             catalog,
           },
     [input, place, live, catalog],
@@ -165,13 +173,15 @@ export function FlightStage(props: Props) {
     // Keyed on filmKey, not tl: tl ticks every second while the station is up.
   }, [capable, progress, filmKey])
 
-  // Load the film's code when the browser is idle; start the GPU on the first touch.
+  // Start the film as soon as the page has painted the answer (or sooner, on a touch).
   useEffect(() => {
     if (!capable) return
-    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 1500))
+    const idle =
+      window.requestIdleCallback ??
+      ((cb: () => void) => window.setTimeout(cb, 200) as unknown as number)
     const cancel = window.cancelIdleCallback ?? window.clearTimeout
-    const id = idle(() => void import('./Flight.tsx'))
     const go = () => setWanted(true)
+    const id = idle(go, { timeout: 1200 })
     const evs = ['pointerdown', 'touchstart', 'wheel', 'keydown', 'scroll'] as const
     for (const e of evs) window.addEventListener(e, go, { once: true, passive: true })
     return () => {
@@ -209,6 +219,11 @@ export function FlightStage(props: Props) {
       if (!ctx) return
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       const a = at(tl, p, reduced)
+      // The 2D picture can't fly: while the film loads, the opening shot is plain space.
+      if (capable && !failed && a.lift > 0) {
+        ctx.clearRect(0, 0, w, h)
+        return
+      }
       const hl = input.kind === 'dusk' ? input.highlight : null
       // On a pass-free night the thing to see moves with the sky; follow it.
       const hlNow = hl ? azElOf(turnSky(hl.dir, place.latDeg, a.clockMs - hl.refMs)) : null
@@ -254,7 +269,7 @@ export function FlightStage(props: Props) {
       let caption = ''
       if (pass && a.beat === 'pass' && a.clockMs >= pass.end.unixMs - 20_000)
         caption = endNote(pass, simple) ?? ''
-      if (pass && (a.beat === 'lift' || a.beat === 'settle') && a.lift > 0.55) {
+      if (pass && a.lift > 0.55 && capable && !failed) {
         const smp = sampleAt(pass.station.samples, a.clockMs)
         caption = flightOrbitCaption({
           station: stationName(pass.noradId).long.replace(/^the /, ''),
@@ -266,7 +281,8 @@ export function FlightStage(props: Props) {
           simple,
         })
       }
-      if (!pass && a.beat !== 'tonight')
+      if (!pass && a.lift > 0.55 && capable && !failed) caption = FLIGHT_COPY.liveNow
+      if (!pass && a.beat === 'dusk')
         caption = duskCaption(sunElevationAt(place, subsolarPoint(a.clockMs)), simple)
       const cap = captionRef.current
       if (cap && caption !== lastCaption) {
@@ -315,6 +331,7 @@ export function FlightStage(props: Props) {
     reduced,
     ready,
     failed,
+    capable,
     place,
     tz,
   ])
@@ -370,7 +387,14 @@ export function FlightStage(props: Props) {
       className="flight"
       style={{ height: capable ? `${tl.screens * 100}svh` : undefined }}
     >
-      <div ref={stageRef} className="flight-stage" data-film={ready && !failed ? '1' : '0'}>
+      <div
+        ref={stageRef}
+        className="flight-stage"
+        data-film={ready && !failed ? '1' : '0'}
+        // Decided once, before the first paint: if the GPU later fails, the 2D
+        // picture takes over behind the same layout, so nothing jumps.
+        data-fly={capable ? '1' : '0'}
+      >
         <canvas ref={posterRef} className="flight-poster" aria-hidden="true" />
         {filmOn && (
           <Suspense fallback={null}>
@@ -382,6 +406,8 @@ export function FlightStage(props: Props) {
               paper={red ? PAPER.red : PAPER.day}
               formatMinute={(ms) => formatTime(ms, tz).replace(/\s?[AP]M$/, '')}
               stationShort={pass ? stationName(pass.noradId).short : ''}
+              placeShort={place.name.split(',')[0] ?? place.name}
+              stationName={(id) => stationName(id).short}
               onReady={() => setReady(true)}
               onFail={() => setFailed(true)}
             />
